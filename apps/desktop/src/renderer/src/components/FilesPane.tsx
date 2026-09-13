@@ -147,6 +147,7 @@ export function FilesPane() {
   return (
     <div className="files-pane">
       <div className="review-toolbar">
+        <span className="pane-label">Git 变更</span>
         {status?.branch && (
           <span className="chip">
             {status.branch}
@@ -160,7 +161,13 @@ export function FilesPane() {
         </button>
       </div>
       {loading && !status && <div className="pane-note">读取仓库状态…</div>}
-      {status && status.changes.length === 0 && <div className="pane-empty">没有变更文件</div>}
+      {status && status.changes.length === 0 && (
+        <div className="pane-empty">
+          工作区干净,没有未提交的更改
+          <br />
+          <span className="pane-empty-sub">agent 改动文件后会实时出现在这里;点击文件即可在检视中查看差异</span>
+        </div>
+      )}
       {tree && status && status.changes.length > 0 && (
         <div className="files-tree">{sortedChildren(tree).map((child) => renderNode(child, 0))}</div>
       )}
