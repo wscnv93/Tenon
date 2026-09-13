@@ -30,4 +30,22 @@ export const api = {
   agentSetSessionName: (projectPath: string, name: string) =>
     invoke("agent:setSessionName", { projectPath, name }),
   listSessions: (projectPath: string) => invoke("sessions:list", { projectPath }),
+  agentGetTree: (projectPath: string) => invoke("agent:getTree", { projectPath }),
+  agentForkAt: (projectPath: string, entryId: string) => invoke("agent:forkAt", { projectPath, entryId }),
+  reviewSendComments: (projectPath: string, comments: { path: string; line: number; text: string }[]) =>
+    invoke("review:sendComments", { projectPath, comments }),
+  gitStatus: (projectPath: string) => invoke("git:status", { projectPath }),
+  gitDiff: (projectPath: string, scope: "uncommitted" | "branch" | "turn", view: "worktree" | "staged") =>
+    invoke("git:diff", { projectPath, scope, view }),
+  gitStageFile: (projectPath: string, path: string) => invoke("git:stageFile", { projectPath, path }),
+  gitUnstageFile: (projectPath: string, path: string) => invoke("git:unstageFile", { projectPath, path }),
+  gitDiscardFile: (projectPath: string, path: string) => invoke("git:discardFile", { projectPath, path }),
+  gitStageHunk: (projectPath: string, path: string, patch: string) =>
+    invoke("git:stageHunk", { projectPath, path, patch }),
+  gitUnstageHunk: (projectPath: string, path: string, patch: string) =>
+    invoke("git:unstageHunk", { projectPath, path, patch }),
+  gitDiscardHunk: (projectPath: string, path: string, patch: string) =>
+    invoke("git:discardHunk", { projectPath, path, patch }),
+  gitStageAll: (projectPath: string) => invoke("git:stageAll", { projectPath }),
+  gitUnstageAll: (projectPath: string) => invoke("git:unstageAll", { projectPath }),
 };

@@ -13,6 +13,61 @@ import type { AgentMessage, JsonAgentSessionEvent, Model, RpcSessionState, Think
 export const TENON_EVENT_CHANNEL = "tenon:event";
 
 // ---------------------------------------------------------------------------
+// Review: git diff view model + inline comments
+// ---------------------------------------------------------------------------
+
+export type FileChangeStatus = "M" | "A" | "D" | "R";
+
+export interface FileChange {
+  path: string;
+  status: FileChangeStatus;
+  staged: boolean;
+}
+
+export interface GitStatus {
+  isRepo: boolean;
+  branch: string | null;
+  ahead: number;
+  behind: number;
+  changes: FileChange[];
+}
+
+export interface DiffLine {
+  kind: "ctx" | "add" | "del";
+  text: string;
+  oldNo: number | null;
+  newNo: number | null;
+}
+
+export interface DiffHunk {
+  header: string;
+  oldStart: number;
+  newStart: number;
+  lines: DiffLine[];
+  /** The hunk as a standalone unified patch (header lines included). */
+  patch: string;
+}
+
+export interface FileDiff {
+  path: string;
+  oldPath: string | null;
+  status: FileChangeStatus;
+  additions: number;
+  deletions: number;
+  binary: boolean;
+  hunks: DiffHunk[];
+  /** Full unified patch for this file, as produced by git. */
+  patch: string;
+}
+
+export interface ReviewComment {
+  path: string;
+  /** New-file line number the comment anchors to. */
+  line: number;
+  text: string;
+}
+
+// ---------------------------------------------------------------------------
 // App info
 // ---------------------------------------------------------------------------
 
@@ -146,6 +201,30 @@ export interface TenonInvokeMap {
   "agent:switchSession": { in: { projectPath: string; sessionPath: string }; out: { state: RpcSessionState; messages: AgentMessage[] } };
   "agent:setSessionName": { in: { projectPath: string; name: string }; out: void };
   "sessions:list": { in: { projectPath: string }; out: { sessions: SessionSummary[] } };
+  "agent:getTree": { in: { projectPath: string }; out: { tree: unknown[]; leafId: string | null } };
+  "agent:forkAt": {
+    in: { projectPath: string; entryId: string };
+    out: { state: RpcSessionState; messages: AgentMessage[] };
+  };
+  "review:sendComments": {
+    in: { projectPath: string; comments: ReviewComment[] };
+    out: void;
+  };
+
+  // ------------------------------------------------------------------ git
+  "git:status": { in: { projectPath: string }; out: GitStatus };
+  "git:diff": {
+    in: { projectPath: string; scope: "uncommitted" | "branch" | "turn"; view: "worktree" | "staged" };
+    out: { files: FileDiff[]; base?: string };
+  };
+  "git:stageFile": { in: { projectPath: string; path: string }; out: void };
+  "git:unstageFile": { in: { projectPath: string; path: string }; out: void };
+  "git:discardFile": { in: { projectPath: string; path: string }; out: void };
+  "git:stageHunk": { in: { projectPath: string; path: string; patch: string }; out: void };
+  "git:unstageHunk": { in: { projectPath: string; path: string; patch: string }; out: void };
+  "git:discardHunk": { in: { projectPath: string; path: string; patch: string }; out: void };
+  "git:stageAll": { in: { projectPath: string }; out: void };
+  "git:unstageAll": { in: { projectPath: string }; out: void };
 }
 
 export type TenonInvokeChannel = keyof TenonInvokeMap;

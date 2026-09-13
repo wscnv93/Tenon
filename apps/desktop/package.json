@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "0.85.1",
-    "@tenon/protocol": "workspace:*"
+    "@tenon/protocol": "workspace:*",
+    "simple-git": "^3.36.0"
   },
   "devDependencies": {
     "@shikijs/stream": "^4.4.3",
@@ -28,7 +29,6 @@
     "react-dom": "^19.3.0",
     "remend": "^1.3.1",
     "shiki": "^4.4.3",
-    "simple-git": "^3.36.0",
     "typescript": "~5.9.3",
     "vite": "^7.3.6"
   }

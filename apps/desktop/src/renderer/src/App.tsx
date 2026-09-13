@@ -5,6 +5,8 @@ import { Sidebar } from "./components/Sidebar";
 import { ThreadView } from "./components/ThreadView";
 import { Composer } from "./components/Composer";
 import { SettingsDialog } from "./components/SettingsDialog";
+import { ReviewPane } from "./components/ReviewPane";
+import { FilesPane } from "./components/FilesPane";
 import {
   activeProjectAtom,
   activeProjectIdAtom,
@@ -17,8 +19,10 @@ import {
   modelsAtom,
   projectsAtom,
   rightCollapsedAtom,
+  rightTabAtom,
   sessionsAtom,
   agentEventToStore,
+  agentSettledTickAtom,
   themePreferenceAtom,
 } from "./state";
 import type { TenonProject } from "@protocol/ipc";
@@ -46,19 +50,31 @@ function Welcome() {
 }
 
 function RightPane() {
+  const [tab, setTab] = useAtom(rightTabAtom);
   return (
     <aside className="right-pane">
       <div className="right-tabs">
-        <span className="right-tab active">检视</span>
-        <span className="right-tab">文件</span>
-        <span className="right-tab">轨迹</span>
+        {(["review", "files", "trajectory"] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            className={`right-tab ${tab === key ? "active" : ""}`}
+            onClick={() => setTab(key)}
+          >
+            {key === "review" ? "检视" : key === "files" ? "文件" : "轨迹"}
+          </button>
+        ))}
       </div>
       <div className="right-pane-body">
-        <div className="right-placeholder">
-          <span className="badge">◫</span>
-          <p>Diff 检视、文件树与轨迹回放将在这里呈现</p>
-          <p className="right-placeholder-sub">M1:unified diff · 暂存/回退 · 行内评论</p>
-        </div>
+        {tab === "review" && <ReviewPane />}
+        {tab === "files" && <FilesPane />}
+        {tab === "trajectory" && (
+          <div className="right-placeholder">
+            <span className="badge">◫</span>
+            <p>轨迹回放(时间轴 + 步进检查器)</p>
+            <p className="right-placeholder-sub">M4:逐事件回放 · tokens/耗时 · 分支导航</p>
+          </div>
+        )}
       </div>
     </aside>
   );
@@ -73,6 +89,7 @@ export default function App() {
   const setAuth = useSetAtom(authStatusAtom);
   const setSessions = useSetAtom(sessionsAtom);
   const setModels = useSetAtom(modelsAtom);
+  const setSettledTick = useSetAtom(agentSettledTickAtom);
   const [agentStore, setAgentStore] = useAtom(agentStoreAtom);
   const [leftCollapsed, setLeftCollapsed] = useAtom(leftCollapsedAtom);
   const [rightCollapsed, setRightCollapsed] = useAtom(rightCollapsedAtom);
@@ -120,6 +137,9 @@ export default function App() {
         return;
       }
       setAgentStore((current) => agentEventToStore(event, activePathRef.current, current));
+      if (event.kind === "agent" && event.event.type === "agent_settled") {
+        setSettledTick((tick) => tick + 1);
+      }
     });
     void (async () => {
       setAppInfo(await api.appInfo());

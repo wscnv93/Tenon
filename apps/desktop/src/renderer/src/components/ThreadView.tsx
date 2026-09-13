@@ -3,6 +3,7 @@ import { useAtom, useAtomValue } from "jotai";
 import { agentStoreAtom } from "../state";
 import type { AgentMessage, AssistantMessage, ToolCall } from "@protocol/pi-types";
 import { Markdown } from "./Markdown";
+import { RawDiff } from "./DiffView";
 
 function textOf(content: string | Array<{ type: string; text?: string }>): string {
   if (typeof content === "string") return content;
@@ -64,7 +65,11 @@ function ToolRunCard({ call }: { call: ToolCall }) {
               <pre>{JSON.stringify(Object.fromEntries(Object.entries(call.arguments).filter(([key]) => key !== "__partial")), null, 2)}</pre>
             </details>
           )}
-          {output && <pre className="tool-output">{output.slice(0, 20000)}</pre>}
+          {typeof run?.details?.diff === "string" ? (
+            <RawDiff text={run.details.diff} />
+          ) : (
+            output && <pre className="tool-output">{output.slice(0, 20000)}</pre>
+          )}
           {status === "running" && !output && <div className="tool-output tool-output-empty">运行中…</div>}
         </div>
       )}

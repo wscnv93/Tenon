@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { api } from "../lib/api";
+import { SessionTree } from "./SessionTree";
 import {
   activeProjectAtom,
   activeProjectIdAtom,
@@ -40,6 +42,7 @@ export function Sidebar() {
   const setSettingsOpen = useSetAtom(settingsOpenAtom);
   const [themePreference, setThemePreference] = useAtom(themePreferenceAtom);
   const [, setAgentStore] = useAtom(agentStoreAtom);
+  const [treeAnchor, setTreeAnchor] = useState<{ rect: DOMRect } | null>(null);
 
   const cycleTheme = (): void => {
     const next = THEME_CYCLE[(THEME_CYCLE.indexOf(themePreference) + 1) % THEME_CYCLE.length]!;
@@ -150,16 +153,28 @@ export function Sidebar() {
             {sessions.map((session) => {
               const active = store.state?.sessionFile === session.path;
               return (
-                <button
-                  key={session.path}
-                  type="button"
-                  className={`sidebar-session ${active ? "active" : ""}`}
-                  onClick={() => void switchSession(session.path)}
-                >
-                  <span className={`sidebar-session-dot ${active ? "on" : ""}`} />
-                  <span className="sidebar-session-time">{formatTime(session.mtime)}</span>
-                  <span className="sidebar-session-size">{Math.max(1, Math.round(session.size / 1024))}k</span>
-                </button>
+                <div key={session.path} className={`sidebar-session ${active ? "active" : ""}`}>
+                  <button
+                    type="button"
+                    className="sidebar-session-main"
+                    onClick={() => void switchSession(session.path)}
+                    title="切换到此会话"
+                  >
+                    <span className={`sidebar-session-dot ${active ? "on" : ""}`} />
+                    <span className="sidebar-session-time">{formatTime(session.mtime)}</span>
+                    <span className="sidebar-session-size">{Math.max(1, Math.round(session.size / 1024))}k</span>
+                  </button>
+                  {active && (
+                    <button
+                      type="button"
+                      className="icon-btn icon-btn-subtle"
+                      title="会话分支树"
+                      onClick={(event) => setTreeAnchor({ rect: event.currentTarget.getBoundingClientRect() })}
+                    >
+                      ⑂
+                    </button>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -183,6 +198,14 @@ export function Sidebar() {
           {store.status === "ready" ? "引擎就绪" : store.status === "starting" ? "启动中…" : store.status === "error" ? "引擎异常" : "未启动"}
         </span>
       </div>
+
+      {treeAnchor && activeProject && (
+        <SessionTree
+          anchor={treeAnchor.rect}
+          projectPath={activeProject.path}
+          onClose={() => setTreeAnchor(null)}
+        />
+      )}
     </aside>
   );
 }

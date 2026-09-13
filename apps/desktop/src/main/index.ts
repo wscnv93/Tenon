@@ -1,10 +1,12 @@
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ensurePaths, getPaths } from "./paths.js";
 import { loadSettings, makeProject, saveSettings, updateProject } from "./tenon-settings.js";
 import { authStatus, removeCredential, setApiKey } from "./auth-store.js";
 import { getPiVersion, hostManager, makeWindowSender, sendUserMessage } from "./pi-host.js";
 import { listSessions } from "./sessions.js";
+import * as git from "./git-service.js";
 import type {
   TenonEvent,
   TenonInvokeChannel,
@@ -12,12 +14,55 @@ import type {
   TenonInvokeOut,
 } from "@protocol/ipc";
 
+// Product identity: fix the userData dir to "Tenon" (unversioned dev builds
+// otherwise derive "@tenon/desktop" from the package name). Migrate legacy
+// data from the old directory so existing projects/keys/sessions survive.
+app.setName("Tenon");
+{
+  const legacy = join(app.getPath("appData"), "@tenon", "desktop");
+  const target = join(app.getPath("appData"), "Tenon");
+  if (!existsSync(target) && existsSync(legacy)) {
+    try {
+      renameSync(legacy, target);
+    } catch {
+      // Migration is best-effort; a fresh userData dir is acceptable.
+    }
+  }
+  // Rewrite session paths recorded before the rename so "resume last session"
+  // keeps working against the migrated store. Idempotent.
+  try {
+    const settingsFile = join(target, "tenon.json");
+    if (existsSync(settingsFile)) {
+      const raw = readFileSync(settingsFile, "utf-8");
+      if (raw.includes("@tenon/desktop/sessions")) {
+        writeFileSync(settingsFile, raw.split("@tenon/desktop/sessions").join("Tenon/sessions"));
+      }
+    }
+  } catch {
+    // Best effort.
+  }
+}
+
 let mainWindow: BrowserWindow | null = null;
+
+// Per-project turn snapshots: captured before each prompt, resolved on settle.
+const turnBefore = new Map<string, git.TurnSnapshot>();
+const turnPaths = new Map<string, string[]>();
 
 function send(event: TenonEvent): void {
   const window = mainWindow;
   if (window && !window.isDestroyed()) {
     window.webContents.send("tenon:event", event);
+  }
+  // Resolve the "turn" review scope when the agent settles.
+  if (event.kind === "agent" && event.event.type === "agent_settled") {
+    const before = turnBefore.get(event.projectPath);
+    if (before) {
+      turnBefore.delete(event.projectPath);
+      void git.captureSnapshot(event.projectPath).then((after) => {
+        turnPaths.set(event.projectPath, git.diffSnapshots(before, after));
+      }).catch(() => {});
+    }
   }
 }
 
@@ -56,6 +101,14 @@ function createWindow(): void {
   });
 
   const devUrl = process.env.ELECTRON_RENDERER_URL;
+  // Surface renderer console output in the terminal (all in dev, warn+ in prod).
+  mainWindow.webContents.on("console-message", (_event, level, message, line, sourceId) => {
+    const text = String(level);
+    if (devUrl || text.includes("error") || text.includes("warning")) {
+      console.log(`[renderer:${text}] ${message} (${sourceId}:${line})`);
+    }
+  });
+
   if (devUrl) {
     void mainWindow.loadURL(devUrl);
   } else {
@@ -167,6 +220,11 @@ function registerIpc(): void {
 
   handle("agent:prompt", async ({ projectPath, message }) => {
     const host = await requireHost(projectPath);
+    try {
+      turnBefore.set(projectPath, await git.captureSnapshot(projectPath));
+    } catch {
+      // Not a repo — the turn scope simply stays empty.
+    }
     await sendUserMessage(host, message);
     const state = await host.refreshState();
     trackSession(projectPath, state.sessionFile);
@@ -239,6 +297,48 @@ function registerIpc(): void {
   });
 
   handle("sessions:list", ({ projectPath }) => ({ sessions: listSessions(projectPath) }));
+
+  handle("agent:getTree", async ({ projectPath }) => {
+    const host = await requireHost(projectPath);
+    return host.rpc({ type: "get_tree" });
+  });
+
+  handle("agent:forkAt", async ({ projectPath, entryId }) => {
+    const host = await requireHost(projectPath);
+    await host.rpc({ type: "fork", entryId });
+    const state = await host.refreshState();
+    trackSession(projectPath, state.sessionFile);
+    const messages = await host.rpc({ type: "get_messages" });
+    return { state, messages: messages.messages };
+  });
+
+  handle("review:sendComments", async ({ projectPath, comments }) => {
+    const host = await requireHost(projectPath);
+    const body = comments.map((comment) => `- ${comment.path}:${comment.line} — ${comment.text}`).join("\n");
+    await sendUserMessage(host, `请根据以下代码检视意见修改实现:\n${body}`);
+    try {
+      turnBefore.set(projectPath, await git.captureSnapshot(projectPath));
+    } catch {
+      // non-repo
+    }
+  });
+
+  // ---------------------------------------------------------------- git
+  handle("git:status", ({ projectPath }) => git.gitStatus(projectPath));
+
+  handle("git:diff", async ({ projectPath, scope, view }) => {
+    const result = await git.diffFiles(projectPath, scope, view, turnPaths.get(projectPath));
+    return result;
+  });
+
+  handle("git:stageFile", ({ projectPath, path }) => git.stageFile(projectPath, path));
+  handle("git:unstageFile", ({ projectPath, path }) => git.unstageFile(projectPath, path));
+  handle("git:discardFile", ({ projectPath, path }) => git.discardFile(projectPath, path));
+  handle("git:stageHunk", ({ projectPath, path, patch }) => git.stageHunk(projectPath, path, patch));
+  handle("git:unstageHunk", ({ projectPath, path, patch }) => git.unstageHunk(projectPath, path, patch));
+  handle("git:discardHunk", ({ projectPath, path, patch }) => git.discardHunk(projectPath, path, patch));
+  handle("git:stageAll", ({ projectPath }) => git.stageAll(projectPath));
+  handle("git:unstageAll", ({ projectPath }) => git.unstageAll(projectPath));
 }
 
 function trackSession(projectPath: string, sessionFile: string | undefined): void {

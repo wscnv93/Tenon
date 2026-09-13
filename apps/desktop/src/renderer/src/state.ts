@@ -25,6 +25,8 @@ export interface ToolRun {
   /** Accumulated partial result content (text), for live output. */
   partialText: string;
   resultText: string | null;
+  /** Tool details payload (e.g. edit tool's rendered diff) when available. */
+  details?: Record<string, unknown>;
 }
 
 export interface Notice {
@@ -205,7 +207,13 @@ export function applyAgentEvent(store: AgentStore, event: JsonAgentSessionEvent)
       const resultText = Array.isArray(result?.content)
         ? result.content.filter((b: any) => b.type === "text").map((b: any) => b.text).join("\n")
         : "";
-      upsertRun(next, { ...existing, status: "done", isError: Boolean(event.isError), resultText });
+      upsertRun(next, {
+        ...existing,
+        status: "done",
+        isError: Boolean(event.isError),
+        resultText,
+        details: result?.details && typeof result.details === "object" ? result.details : undefined,
+      });
       return next;
     }
     case "queue_update":
@@ -284,6 +292,19 @@ function atomWithLocalStorage(key: string, initial: boolean) {
 
 export const leftCollapsedAtom = atomWithLocalStorage("tenon:leftCollapsed", false);
 export const rightCollapsedAtom = atomWithLocalStorage("tenon:rightCollapsed", false);
+
+// Right pane tab + review data
+export type RightTab = "review" | "files" | "trajectory";
+export const rightTabAtom = atom<RightTab>("review");
+
+/** Set to a file path to focus/expand it in the review pane; consumed once. */
+export const reviewFocusAtom = atom<string | null>(null);
+
+/** Append-to-composer signal (e.g. @path inserted from the files pane). */
+export const composerInsertAtom = atom<{ text: string; nonce: number } | null>(null);
+
+/** Bumped on every agent_settled so panes can refresh turn-scoped data. */
+export const agentSettledTickAtom = atom(0);
 
 // ---------------------------------------------------------------------------
 // Theme: "system" follows the OS, otherwise explicit dark/light.

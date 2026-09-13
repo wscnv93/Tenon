@@ -5,6 +5,7 @@ import {
   activeProjectAtom,
   agentStoreAtom,
   authStatusAtom,
+  composerInsertAtom,
   modelsAtom,
   modelsLoadingAtom,
   settingsOpenAtom,
@@ -165,6 +166,14 @@ export function Composer() {
   const setSettingsOpen = useSetAtom(settingsOpenAtom);
   const [text, setText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const insertSignal = useAtomValue(composerInsertAtom);
+
+  // Files pane "insert @path" requests.
+  useEffect(() => {
+    if (!insertSignal) return;
+    setText((prev) => prev + insertSignal.text);
+    textareaRef.current?.focus();
+  }, [insertSignal]);
 
   const streaming = store.state?.isStreaming ?? false;
   const noKeys = auth.length > 0 && auth.every((entry) => !entry.configured);
