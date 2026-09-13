@@ -9,6 +9,7 @@ import { ReviewPane } from "./components/ReviewPane";
 import { FilesPane } from "./components/FilesPane";
 import { ApprovalCards } from "./components/ApprovalCards";
 import { TrajectoryPane } from "./components/TrajectoryPane";
+import { TerminalDrawer } from "./components/TerminalDrawer";
 import { TIcon } from "./components/TIcon";
 import {
   activeProjectAtom,
@@ -221,6 +222,7 @@ export default function App() {
             <ThreadView />
             <ApprovalCards />
             <Composer />
+            <TerminalDrawer />
           </main>
           <RightPane />
         </div>

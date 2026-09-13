@@ -8,6 +8,12 @@ const api = {
     ipcRenderer.on("tenon:event", listener);
     return () => ipcRenderer.removeListener("tenon:event", listener);
   },
+  onTerminal: (callback: (payload: { id: string; data?: string; exited?: boolean; exitCode?: number }) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: unknown): void =>
+      callback(payload as { id: string; data?: string; exited?: boolean; exitCode?: number });
+    ipcRenderer.on("tenon:terminal", listener);
+    return () => ipcRenderer.removeListener("tenon:terminal", listener);
+  },
 };
 
 contextBridge.exposeInMainWorld("tenon", api);

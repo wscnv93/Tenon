@@ -8,6 +8,7 @@ import { getPiVersion, hostManager, makeWindowSender, sendUserMessage } from "./
 import { listSessions } from "./sessions.js";
 import * as git from "./git-service.js";
 import { DEFAULT_MODE, ensureGateExtension, readModeFile, writeModeFile } from "./gate-extension.js";
+import { TerminalService, TERMINAL_EVENT_CHANNEL } from "./terminal-service.js";
 import type {
   TenonEvent,
   TenonInvokeChannel,
@@ -45,6 +46,7 @@ app.setName("Tenon");
 }
 
 let mainWindow: BrowserWindow | null = null;
+let terminalService: TerminalService;
 
 // Per-project turn snapshots: captured before each prompt, resolved on settle.
 const turnBefore = new Map<string, git.TurnSnapshot>();
@@ -341,6 +343,13 @@ function registerIpc(): void {
     host?.rpcClientWrite({ type: "extension_ui_response", id, ...response });
   });
 
+  handle("terminal:create", ({ projectPath, cols, rows }) => ({
+    id: terminalService.create(projectPath, cols, rows),
+  }));
+  handle("terminal:input", ({ id, data }) => terminalService.input(id, data));
+  handle("terminal:resize", ({ id, cols, rows }) => terminalService.resize(id, cols, rows));
+  handle("terminal:dispose", ({ id }) => terminalService.dispose(id));
+
   // ---------------------------------------------------------------- git
   handle("git:status", ({ projectPath }) => git.gitStatus(projectPath));
 
@@ -382,6 +391,7 @@ if (!app.requestSingleInstanceLock()) {
   void app.whenReady().then(() => {
     ensurePaths();
     ensureGateExtension();
+    terminalService = new TerminalService(() => mainWindow);
     // Brand icon for dev (packaged builds take the icon from build/icns).
     if (process.platform === "darwin" && app.dock) {
       const iconPath = join(app.getAppPath(), "build", "icon.png");
@@ -404,5 +414,6 @@ if (!app.requestSingleInstanceLock()) {
   app.on("before-quit", () => {
     // Best-effort; child processes also die with SIGTERM propagation.
     void hostManager.stopAll();
+    terminalService?.disposeAll();
   });
 }
