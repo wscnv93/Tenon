@@ -59,7 +59,7 @@ function agentDir(): string {
   return process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent");
 }
 
-function readMode(): ExecMode {
+export function readMode(): ExecMode {
   try {
     const file = join(agentDir(), MODE_FILE);
     if (!existsSync(file)) return "workspace-write";
@@ -85,7 +85,7 @@ const state: GateState = {
   tmp: tmpdir(),
 };
 
-async function ensureSandbox(mode: ExecMode, cwd: string): Promise<void> {
+export async function ensureSandbox(mode: ExecMode, cwd: string): Promise<void> {
   const key = `${mode}:${cwd}`;
   if (state.initializedKey === key) return;
   if (state.initializedKey !== null) {

@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { setupGate } from "./gate.js";
+import { setupReview } from "./review.js";
 import { CodeIndex, projectStorePath } from "./codegraph/indexer.js";
 import { setupCodegraphTools } from "./codegraph/tools.js";
 
@@ -21,6 +22,7 @@ let indexStarted = false;
 
 export default function (pi: ExtensionAPI) {
   setupGate(pi);
+  setupReview(pi);
   setupCodegraphTools(pi, () => codeIndex);
 
   pi.on("session_start", async (_event, ctx) => {

@@ -49,7 +49,13 @@ export function resolvePiRuntime(): PiRuntime {
     cachedRuntime = { command: override, commandArgs: [] };
     return cachedRuntime;
   }
-  const vendorBinary = join(app.getAppPath(), "vendor", `pi-${process.platform}-${process.arch}`, "pi");
+  // Dev: apps/desktop/vendor; packaged: Contents/Resources/vendor (extraResources).
+  const vendorBinary = join(
+    existsSync(join(app.getAppPath(), "vendor")) ? app.getAppPath() : process.resourcesPath,
+    "vendor",
+    `pi-${process.platform}-${process.arch}`,
+    "pi",
+  );
   if (existsSync(vendorBinary)) {
     cachedRuntime = { command: vendorBinary, commandArgs: [] };
     return cachedRuntime;

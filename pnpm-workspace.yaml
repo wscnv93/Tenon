@@ -5,3 +5,5 @@ packages:
 onlyBuiltDependencies:
   - esbuild
   - electron
+  - node-pty
+  - electron-winstaller

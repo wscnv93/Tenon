@@ -18,10 +18,10 @@ export const DEFAULT_MODE: ExecMode = "workspace-write";
 export const MODE_FILE = "tenon-mode.json";
 
 function extensionPackageSource(): string | null {
-  // electron-vite dev: app root is apps/desktop → workspace packages live two up.
+  // Dev: workspace package two levels up; packaged: extraResources copy.
   const candidates = [
     join(app.getAppPath(), "..", "..", "packages", "pi-extensions"),
-    join(app.getAppPath(), "resources", "tenon-gate"), // packaged (extraResources)
+    join(process.resourcesPath, "tenon-gate"),
     join(app.getAppPath(), "tenon-gate"),
   ];
   for (const candidate of candidates) {
