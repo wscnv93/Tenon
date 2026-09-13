@@ -70,9 +70,16 @@ function RightPane() {
         ))}
       </div>
       <div className="right-pane-body">
-        {tab === "review" && <ReviewPane />}
-        {tab === "files" && <FilesPane />}
-        {tab === "trajectory" && <TrajectoryPane />}
+        {/* All panes stay mounted: switching tabs must not re-pay git work. */}
+        <div className={`right-pane-content ${tab === "review" ? "" : "hidden-pane"}`}>
+          <ReviewPane />
+        </div>
+        <div className={`right-pane-content ${tab === "files" ? "" : "hidden-pane"}`}>
+          <FilesPane />
+        </div>
+        <div className={`right-pane-content ${tab === "trajectory" ? "" : "hidden-pane"}`}>
+          <TrajectoryPane />
+        </div>
       </div>
     </aside>
   );

@@ -20,7 +20,35 @@ function gitFor(projectPath: string): SimpleGit {
   return git;
 }
 
+// ---------------------------------------------------------------------------
+// Result cache: tab switches must not re-pay git subprocesses. Short TTL +
+// explicit invalidation whenever git state changes (agent settles, staging,
+// discards).
+// ---------------------------------------------------------------------------
+
+const CACHE_TTL_MS = 4000;
+const statusCache = new Map<string, { at: number; status: GitStatus }>();
+const diffCache = new Map<string, { at: number; diff: { files: FileDiff[]; base?: string } }>();
+
+export function invalidateGitCache(projectPath?: string): void {
+  if (projectPath) {
+    statusCache.delete(projectPath);
+    for (const key of [...diffCache.keys()]) {
+      if (diffCache.get(key)!.diff && key.startsWith(projectPath)) diffCache.delete(key);
+    }
+  } else {
+    statusCache.clear();
+    diffCache.clear();
+  }
+}
+
+function diffKey(projectPath: string, scope: string, view: string): string {
+  return `${projectPath}::${scope}::${view}`;
+}
+
 export async function gitStatus(projectPath: string): Promise<GitStatus> {
+  const cached = statusCache.get(projectPath);
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.status;
   const git = gitFor(projectPath);
   if (!(await isRepo(git))) return emptyStatus();
   const status = await git.status();
@@ -40,13 +68,15 @@ export async function gitStatus(projectPath: string): Promise<GitStatus> {
     }
     changes.push({ path: file.path, status: statusLetter, staged });
   }
-  return {
+  const result: GitStatus = {
     isRepo: true,
     branch: status.current ?? null,
     ahead: status.ahead ?? 0,
     behind: status.behind ?? 0,
     changes,
   };
+  statusCache.set(projectPath, { at: Date.now(), status: result });
+  return result;
 }
 
 /** Files changed since the last turn snapshot (symmetric difference). */
@@ -56,6 +86,9 @@ export async function diffFiles(
   view: "worktree" | "staged",
   turnPaths?: readonly string[],
 ): Promise<{ files: FileDiff[]; base?: string }> {
+  const key = diffKey(projectPath, scope, view);
+  const cachedDiff = diffCache.get(key);
+  if (cachedDiff && Date.now() - cachedDiff.at < CACHE_TTL_MS) return cachedDiff.diff;
   const git = gitFor(projectPath);
   if (!(await isRepo(git))) return { files: [] };
   const args: string[] = ["--no-color", "-U3"];
@@ -65,7 +98,9 @@ export async function diffFiles(
     const base = await resolveBranchBase(git);
     if (!base) return { files: [] };
     const text = await git.raw(["diff", "--no-color", `${base}...HEAD`]);
-    return { files: parseUnifiedDiff(text), base };
+    const result = { files: parseUnifiedDiff(text), base };
+    diffCache.set(key, { at: Date.now(), diff: result });
+    return result;
   }
 
   if (scope === "turn") {
@@ -74,13 +109,17 @@ export async function diffFiles(
     const text = hasHead
       ? await git.raw(["diff", "HEAD", "--no-color", "--", ...paths])
       : await git.raw(["diff", "--no-color", "--", ...paths]);
-    return { files: parseUnifiedDiff(text) };
+    const result = { files: parseUnifiedDiff(text) };
+    diffCache.set(key, { at: Date.now(), diff: result });
+    return result;
   }
 
   // uncommitted
   if (view === "staged") {
     const text = await git.raw(["diff", "--cached", "--no-color"]);
-    return { files: parseUnifiedDiff(text) };
+    const result = { files: parseUnifiedDiff(text) };
+    diffCache.set(key, { at: Date.now(), diff: result });
+    return result;
   }
   const text = hasHead
     ? await git.raw(["diff", "HEAD", "--no-color"])
@@ -107,7 +146,9 @@ export async function diffFiles(
       }
     }
   }
-  return { files };
+  const result = { files };
+  diffCache.set(key, { at: Date.now(), diff: result });
+  return result;
 }
 
 export async function stageFile(projectPath: string, path: string): Promise<void> {

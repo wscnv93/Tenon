@@ -59,6 +59,7 @@ function send(event: TenonEvent): void {
   }
   // Resolve the "turn" review scope when the agent settles.
   if (event.kind === "agent" && event.event.type === "agent_settled") {
+    git.invalidateGitCache(event.projectPath);
     const before = turnBefore.get(event.projectPath);
     if (before) {
       turnBefore.delete(event.projectPath);
@@ -229,6 +230,7 @@ function registerIpc(): void {
     } catch {
       // Not a repo — the turn scope simply stays empty.
     }
+    git.invalidateGitCache(projectPath);
     await sendUserMessage(host, message);
     const state = await host.refreshState();
     trackSession(projectPath, state.sessionFile);
@@ -358,14 +360,29 @@ function registerIpc(): void {
     return result;
   });
 
-  handle("git:stageFile", ({ projectPath, path }) => git.stageFile(projectPath, path));
-  handle("git:unstageFile", ({ projectPath, path }) => git.unstageFile(projectPath, path));
-  handle("git:discardFile", ({ projectPath, path }) => git.discardFile(projectPath, path));
-  handle("git:stageHunk", ({ projectPath, path, patch }) => git.stageHunk(projectPath, path, patch));
-  handle("git:unstageHunk", ({ projectPath, path, patch }) => git.unstageHunk(projectPath, path, patch));
-  handle("git:discardHunk", ({ projectPath, path, patch }) => git.discardHunk(projectPath, path, patch));
-  handle("git:stageAll", ({ projectPath }) => git.stageAll(projectPath));
-  handle("git:unstageAll", ({ projectPath }) => git.unstageAll(projectPath));
+  const mutating = (fn: (projectPath: string) => Promise<void>): ((payload: { projectPath: string }) => Promise<void>) =>
+    async ({ projectPath }) => {
+      await fn(projectPath);
+      git.invalidateGitCache(projectPath);
+    };
+  const fileOp = (fn: (projectPath: string, path: string) => Promise<void>) =>
+    async ({ projectPath, path }: { projectPath: string; path: string }) => {
+      await fn(projectPath, path);
+      git.invalidateGitCache(projectPath);
+    };
+  const patchOp = (fn: (projectPath: string, path: string, patch: string) => Promise<void>) =>
+    async ({ projectPath, path, patch }: { projectPath: string; path: string; patch: string }) => {
+      await fn(projectPath, path, patch);
+      git.invalidateGitCache(projectPath);
+    };
+  handle("git:stageFile", fileOp(git.stageFile));
+  handle("git:unstageFile", fileOp(git.unstageFile));
+  handle("git:discardFile", fileOp(git.discardFile));
+  handle("git:stageHunk", patchOp(git.stageHunk));
+  handle("git:unstageHunk", patchOp(git.unstageHunk));
+  handle("git:discardHunk", patchOp(git.discardHunk));
+  handle("git:stageAll", mutating(git.stageAll));
+  handle("git:unstageAll", mutating(git.unstageAll));
 }
 
 function trackSession(projectPath: string, sessionFile: string | undefined): void {

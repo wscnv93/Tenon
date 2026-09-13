@@ -2261,3 +2261,17 @@ select {
   color: var(--text-faint);
   font-size: 11px;
 }
+
+/* right pane: keep all panes mounted, hide inactive (tab switch = instant) */
+
+.right-pane-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.hidden-pane {
+  display: none;
+}
