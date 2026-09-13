@@ -224,6 +224,7 @@ export interface TenonInvokeMap {
   };
   "agent:getExecMode": { in: void; out: { mode: ExecMode } };
   "agent:setExecMode": { in: { mode: ExecMode }; out: void };
+  "agent:getEntries": { in: { projectPath: string }; out: { entries: unknown[]; leafId: string | null } };
   "agent:extensionUiResponse": {
     in: { projectPath: string; id: string; response: Record<string, unknown> };
     out: void;

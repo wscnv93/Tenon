@@ -50,6 +50,7 @@ export const api = {
   gitUnstageAll: (projectPath: string) => invoke("git:unstageAll", { projectPath }),
   getExecMode: () => invoke("agent:getExecMode", undefined as never),
   setExecMode: (mode: string) => invoke("agent:setExecMode", { mode: mode as never }),
+  getEntries: (projectPath: string) => invoke("agent:getEntries", { projectPath }),
   extensionUiResponse: (projectPath: string, id: string, response: Record<string, unknown>) =>
     invoke("agent:extensionUiResponse", { projectPath, id, response }),
 };

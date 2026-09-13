@@ -8,6 +8,7 @@ import { SettingsDialog } from "./components/SettingsDialog";
 import { ReviewPane } from "./components/ReviewPane";
 import { FilesPane } from "./components/FilesPane";
 import { ApprovalCards } from "./components/ApprovalCards";
+import { TrajectoryPane } from "./components/TrajectoryPane";
 import { TIcon } from "./components/TIcon";
 import {
   activeProjectAtom,
@@ -70,13 +71,7 @@ function RightPane() {
       <div className="right-pane-body">
         {tab === "review" && <ReviewPane />}
         {tab === "files" && <FilesPane />}
-        {tab === "trajectory" && (
-          <div className="right-placeholder">
-            <span className="badge"><TIcon size={20} /></span>
-            <p>轨迹回放(时间轴 + 步进检查器)</p>
-            <p className="right-placeholder-sub">M4:逐事件回放 · tokens/耗时 · 分支导航</p>
-          </div>
-        )}
+        {tab === "trajectory" && <TrajectoryPane />}
       </div>
     </aside>
   );

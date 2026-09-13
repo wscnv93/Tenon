@@ -327,6 +327,11 @@ function registerIpc(): void {
 
   handle("agent:getExecMode", () => ({ mode: readModeFile() }));
 
+  handle("agent:getEntries", async ({ projectPath }) => {
+    const host = await requireHost(projectPath);
+    return host.rpc({ type: "get_entries" });
+  });
+
   handle("agent:setExecMode", ({ mode }) => {
     writeModeFile(mode);
   });
