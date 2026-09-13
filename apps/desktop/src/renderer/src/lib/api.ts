@@ -52,6 +52,10 @@ export const api = {
   setExecMode: (mode: string) => invoke("agent:setExecMode", { mode: mode as never }),
   getEntries: (projectPath: string) => invoke("agent:getEntries", { projectPath }),
   listProjectDir: (projectPath: string, dir?: string) => invoke("files:list", { projectPath, dir }),
+  updateCheck: (repo: string) => invoke("update:check", { repo }),
+  updateInstall: (repo: string) => invoke("update:install", { repo }),
+  getUpdateRepo: () => invoke("settings:getUpdateRepo", undefined as never),
+  setUpdateRepo: (repo: string) => invoke("settings:setUpdateRepo", { repo }),
   extensionUiResponse: (projectPath: string, id: string, response: Record<string, unknown>) =>
     invoke("agent:extensionUiResponse", { projectPath, id, response }),
 };

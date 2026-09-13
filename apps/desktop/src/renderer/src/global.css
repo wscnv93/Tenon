@@ -2275,3 +2275,102 @@ select {
 .hidden-pane {
   display: none;
 }
+
+/* settings: sectioned layout + update card */
+
+.modal-wide {
+  width: min(860px, calc(100vw - 80px));
+}
+
+.modal-columns {
+  display: grid;
+  grid-template-columns: 168px 1fr;
+  min-height: 0;
+  flex: 1;
+}
+
+.settings-nav {
+  border-right: 1px solid var(--seam);
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-nav-item {
+  text-align: left;
+  padding: 7px 12px;
+  border-radius: var(--r-sm);
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.settings-nav-item:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.settings-nav-item.on {
+  background: var(--bg-active);
+  color: var(--text);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.modal-body-flush {
+  overflow-y: auto;
+}
+
+.update-card {
+  border: 1px solid var(--accent);
+  border-radius: var(--r);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  background: var(--accent-wash);
+}
+
+.update-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.update-version {
+  font-weight: 650;
+  color: var(--accent);
+}
+
+.update-notes {
+  font-family: var(--mono);
+  font-size: 11px;
+  white-space: pre-wrap;
+  color: var(--text-dim);
+  max-height: 160px;
+  overflow-y: auto;
+  user-select: text;
+  margin-bottom: 10px;
+}
+
+.update-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.update-progress-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-active);
+  overflow: hidden;
+}
+
+.update-progress-bar div {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+.update-repo-row {
+  margin-bottom: 12px;
+}

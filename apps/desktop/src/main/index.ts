@@ -10,6 +10,7 @@ import * as git from "./git-service.js";
 import { DEFAULT_MODE, ensureGateExtension, readModeFile, writeModeFile } from "./gate-extension.js";
 import { TerminalService, TERMINAL_EVENT_CHANNEL } from "./terminal-service.js";
 import { listProjectDir } from "./files-browse.js";
+import { checkUpdate, downloadUpdate, installUpdate, type UpdateProgress } from "./update-service.js";
 import type {
   TenonEvent,
   TenonInvokeChannel,
@@ -52,6 +53,14 @@ let terminalService: TerminalService;
 // Per-project turn snapshots: captured before each prompt, resolved on settle.
 const turnBefore = new Map<string, git.TurnSnapshot>();
 const turnPaths = new Map<string, string[]>();
+
+function sendUpdateProgress(
+  stage: "idle" | "checking" | "downloading" | "installing" | "done" | "error",
+  percent?: number,
+  error?: string,
+): void {
+  send({ kind: "updateProgress", stage, percent, error });
+}
 
 function send(event: TenonEvent): void {
   const window = mainWindow;
@@ -353,6 +362,43 @@ function registerIpc(): void {
   handle("terminal:resize", ({ id, cols, rows }) => terminalService.resize(id, cols, rows));
   handle("terminal:dispose", ({ id }) => terminalService.dispose(id));
   handle("files:list", ({ projectPath, dir }) => ({ entries: listProjectDir(projectPath, dir) }));
+
+  handle("settings:getUpdateRepo", () => ({ repo: loadSettings().updateRepo ?? "" }));
+  handle("settings:setUpdateRepo", ({ repo }) => {
+    const settings = loadSettings();
+    saveSettings({ ...settings, updateRepo: repo.trim() });
+  });
+  handle("update:check", async ({ repo }) => {
+    sendUpdateProgress("checking");
+    return checkUpdate(repo);
+  });
+  handle("update:install", async ({ repo }) => {
+    try {
+      sendUpdateProgress("checking");
+      const check = await checkUpdate(repo);
+      if (check.error) {
+        sendUpdateProgress("error", undefined, check.error);
+        return;
+      }
+      if (!check.hasUpdate) {
+        sendUpdateProgress("done");
+        return;
+      }
+      if (!check.assetUrl) {
+        sendUpdateProgress("error", undefined, "release 中没有匹配当前架构的 DMG");
+        return;
+      }
+      const dmgPath = await downloadUpdate(check.assetUrl, (stage, percent, error) =>
+        sendUpdateProgress(stage, percent, error),
+      );
+      sendUpdateProgress("installing");
+      installUpdate(dmgPath);
+      sendUpdateProgress("done");
+      setTimeout(() => app.quit(), 1200);
+    } catch (error) {
+      sendUpdateProgress("error", undefined, error instanceof Error ? error.message : String(error));
+    }
+  });
 
   // ---------------------------------------------------------------- git
   handle("git:status", ({ projectPath }) => git.gitStatus(projectPath));

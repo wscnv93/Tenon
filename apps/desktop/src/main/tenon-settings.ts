@@ -6,6 +6,8 @@ import type { TenonProject } from "@protocol/ipc";
 export interface TenonSettings {
   projects: TenonProject[];
   activeProjectId: string | null;
+  /** GitHub "owner/repo" whose Releases feed app updates. */
+  updateRepo?: string;
 }
 
 const DEFAULTS: TenonSettings = { projects: [], activeProjectId: null };
@@ -24,6 +26,7 @@ export function loadSettings(): TenonSettings {
     cache = {
       projects: Array.isArray(parsed.projects) ? parsed.projects : [],
       activeProjectId: parsed.activeProjectId ?? null,
+      updateRepo: typeof parsed.updateRepo === "string" ? parsed.updateRepo : "",
     };
   } catch {
     cache = { ...DEFAULTS };

@@ -26,6 +26,7 @@ import {
   rightTabAtom,
   sessionsAtom,
   agentEventToStore,
+  updateProgressAtom,
   agentSettledTickAtom,
   themePreferenceAtom,
 } from "./state";
@@ -95,6 +96,7 @@ export default function App() {
   const setSessions = useSetAtom(sessionsAtom);
   const setModels = useSetAtom(modelsAtom);
   const setSettledTick = useSetAtom(agentSettledTickAtom);
+  const setUpdateProgress = useSetAtom(updateProgressAtom);
   const [agentStore, setAgentStore] = useAtom(agentStoreAtom);
   const [leftCollapsed, setLeftCollapsed] = useAtom(leftCollapsedAtom);
   const [rightCollapsed, setRightCollapsed] = useAtom(rightCollapsedAtom);
@@ -139,6 +141,10 @@ export default function App() {
       if (event.kind === "settingsChanged") {
         setProjects(event.projects);
         setActiveId(event.activeProjectId);
+        return;
+      }
+      if (event.kind === "updateProgress") {
+        setUpdateProgress(event);
         return;
       }
       setAgentStore((current) => agentEventToStore(event, activePathRef.current, current));

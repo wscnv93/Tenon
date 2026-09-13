@@ -10,7 +10,7 @@ import type {
   ThinkingContent,
   ToolCall,
 } from "@protocol/pi-types";
-import type { AppInfo, HostStatus, ProviderCredentialStatus, SessionSummary, TenonEvent, TenonProject } from "@protocol/ipc";
+import type { AppInfo, HostStatus, ProviderCredentialStatus, SessionSummary, TenonEvent, TenonProject, UpdateProgressEvent } from "@protocol/ipc";
 
 // ---------------------------------------------------------------------------
 // Transcript view model
@@ -322,6 +322,8 @@ export const execModeAtom = atom<{ mode: "read-only" | "workspace-write" | "full
   mode: "workspace-write",
   nonce: 0,
 });
+
+export const updateProgressAtom = atom<UpdateProgressEvent | null>(null);
 
 // ---------------------------------------------------------------------------
 // Theme: "system" follows the OS, otherwise explicit dark/light.

@@ -166,7 +166,15 @@ export interface PromptRequest {
 // Push events (main → renderer)
 // ---------------------------------------------------------------------------
 
+export type UpdateProgressEvent = {
+  kind: "updateProgress";
+  stage: "idle" | "checking" | "downloading" | "installing" | "done" | "error";
+  percent?: number;
+  error?: string;
+};
+
 export type TenonEvent =
+  | UpdateProgressEvent
   | { kind: "hostStatus"; projectPath: string; status: HostStatus; error?: string }
   | { kind: "agent"; projectPath: string; event: JsonAgentSessionEvent }
   | { kind: "extensionUi"; projectPath: string; request: unknown }
@@ -233,6 +241,21 @@ export interface TenonInvokeMap {
     in: { projectPath: string; dir?: string };
     out: { entries: Array<{ name: string; isDir: boolean }> };
   };
+  "update:check": {
+    in: { repo: string };
+    out: {
+      currentVersion: string;
+      hasUpdate: boolean;
+      latestVersion?: string;
+      notes?: string;
+      assetUrl?: string;
+      htmlUrl?: string;
+      error?: string;
+    };
+  };
+  "update:install": { in: { repo: string }; out: void };
+  "settings:getUpdateRepo": { in: void; out: { repo: string } };
+  "settings:setUpdateRepo": { in: { repo: string }; out: void };
   "agent:extensionUiResponse": {
     in: { projectPath: string; id: string; response: Record<string, unknown> };
     out: void;
