@@ -19,8 +19,10 @@ export function TIcon({ size = 16, style }: { size?: number; style?: CSSProperti
       <g transform="translate(0,4) scale(1,0.92) translate(0,52)">
         <rect x="126" y="124" width="288" height="100" rx="10" fill="#a5792a" />
         <rect x="218" y="244" width="104" height="170" rx="9" fill="#a5792a" />
-        <rect x="234" y="184" width="44" height="46" rx="3" fill="#e8b84b" />
-        <rect x="204" y="230" width="104" height="170" rx="9" fill="#e8b84b" />
+        <path
+          d="M 234 184 H 278 V 230 H 304 V 391 Q 304 400 295 400 H 213 Q 204 400 204 391 V 230 H 234 Z"
+          fill="#e8b84b"
+        />
         <rect x="112" y="110" width="288" height="100" rx="10" fill="#e8b84b" />
         <g stroke="#c08a2e" strokeWidth="10" strokeLinecap="round" opacity="0.5">
           <line x1="136" y1="136" x2="376" y2="136" />
