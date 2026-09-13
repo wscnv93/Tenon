@@ -15,18 +15,15 @@ function textOf(content: string | Array<{ type: string; text?: string }>): strin
 function UserBubble({ message }: { message: Extract<AgentMessage, { role: "user" }> }) {
   return (
     <div className="msg-user">
-      <div className="msg-user-avatar">你</div>
-      <div className="msg-user-body">
-        {typeof message.content === "string" ? (
-          <div className="msg-user-text">{message.content}</div>
-        ) : (
-          message.content.map((block, i) =>
-            block.type === "text" ? (
-              <div key={i} className="msg-user-text">{block.text}</div>
-            ) : null,
-          )
-        )}
-      </div>
+      {typeof message.content === "string" ? (
+        <div className="msg-user-text">{message.content}</div>
+      ) : (
+        message.content.map((block, i) =>
+          block.type === "text" ? (
+            <div key={i} className="msg-user-text">{block.text}</div>
+          ) : null,
+        )
+      )}
     </div>
   );
 }
@@ -147,9 +144,9 @@ export function ThreadView() {
     return (
       <div className="thread-empty" ref={scrollRef}>
         <div className="thread-empty-hero">
-          <div className="thread-empty-logo">桥</div>
-          <h2>Tenon</h2>
-          <p>打开一个代码仓库,配置任意厂商的 API Key,即可开始。</p>
+          <span className="badge">榫</span>
+          <h2>Tenon 已就绪</h2>
+          <p>在下方描述任务;配置厂商密钥后模型会自动出现。</p>
         </div>
       </div>
     );

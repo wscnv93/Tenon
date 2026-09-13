@@ -285,6 +285,31 @@ function atomWithLocalStorage(key: string, initial: boolean) {
 export const leftCollapsedAtom = atomWithLocalStorage("tenon:leftCollapsed", false);
 export const rightCollapsedAtom = atomWithLocalStorage("tenon:rightCollapsed", false);
 
+// ---------------------------------------------------------------------------
+// Theme: "system" follows the OS, otherwise explicit dark/light.
+// ---------------------------------------------------------------------------
+
+export type ThemePreference = "system" | "dark" | "light";
+
+function readStoredTheme(): ThemePreference {
+  if (typeof localStorage === "undefined") return "system";
+  const stored = localStorage.getItem("tenon:theme");
+  return stored === "dark" || stored === "light" || stored === "system" ? stored : "system";
+}
+
+export const themePreferenceAtom = atom<ThemePreference>(readStoredTheme());
+
+/** Applies the data-theme attribute; call on change and on system flips. */
+export function applyTheme(preference: ThemePreference): void {
+  const resolved =
+    preference === "system"
+      ? window.matchMedia("(prefers-color-scheme: light)").matches
+        ? "light"
+        : "dark"
+      : preference;
+  document.documentElement.dataset.theme = resolved;
+}
+
 export function agentEventToStore(event: TenonEvent, projectPath: string | null, current: AgentStore): AgentStore {
   if (event.kind === "hostStatus") {
     if (!projectPath || event.projectPath !== projectPath) return current;

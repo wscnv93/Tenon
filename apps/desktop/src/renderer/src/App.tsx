@@ -10,6 +10,7 @@ import {
   activeProjectIdAtom,
   agentStoreAtom,
   appInfoAtom,
+  applyTheme,
   authStatusAtom,
   emptyAgentStore,
   leftCollapsedAtom,
@@ -18,26 +19,23 @@ import {
   rightCollapsedAtom,
   sessionsAtom,
   agentEventToStore,
+  themePreferenceAtom,
 } from "./state";
 import type { TenonProject } from "@protocol/ipc";
 
 function Welcome() {
-  const setProjects = useSetAtom(projectsAtom);
-  const setActiveId = useSetAtom(activeProjectIdAtom);
   const openProject = async (): Promise<void> => {
     try {
       await api.addProject();
     } catch {
-      // cancelled
+      // Cancelled dialog.
     }
   };
-  void setProjects;
-  void setActiveId;
   return (
     <div className="welcome">
       <div className="welcome-card">
-        <div className="welcome-logo">桥</div>
-        <h1>Tenon</h1>
+        <span className="badge">榫</span>
+        <div className="welcome-wordmark">TENON</div>
         <p>基于 pi 引擎的编程客户端。任意厂商模型、沙箱执行、代码图谱、全程可回溯。</p>
         <button type="button" className="btn btn-primary" onClick={() => void openProject()}>
           打开代码仓库
@@ -57,7 +55,7 @@ function RightPane() {
       </div>
       <div className="right-pane-body">
         <div className="right-placeholder">
-          <div className="right-placeholder-icon">⌥</div>
+          <span className="badge">◫</span>
           <p>Diff 检视、文件树与轨迹回放将在这里呈现</p>
           <p className="right-placeholder-sub">M1:unified diff · 暂存/回退 · 行内评论</p>
         </div>
@@ -78,10 +76,21 @@ export default function App() {
   const [agentStore, setAgentStore] = useAtom(agentStoreAtom);
   const [leftCollapsed, setLeftCollapsed] = useAtom(leftCollapsedAtom);
   const [rightCollapsed, setRightCollapsed] = useAtom(rightCollapsedAtom);
+  const [themePreference] = useAtom(themePreferenceAtom);
   const activePathRef = useRef<string | null>(null);
   const bootstrappedRef = useRef(false);
 
   activePathRef.current = activeProject?.path ?? null;
+
+  // Theme: apply preference now; follow the OS while set to "system".
+  useEffect(() => {
+    applyTheme(themePreference);
+    if (themePreference !== "system") return;
+    const media = window.matchMedia("(prefers-color-scheme: light)");
+    const onChange = (): void => applyTheme("system");
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, [themePreference]);
 
   // Pane collapse shortcuts: ⌘B left, ⌘\ right.
   useEffect(() => {

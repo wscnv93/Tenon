@@ -8,7 +8,17 @@ import {
   projectsAtom,
   sessionsAtom,
   settingsOpenAtom,
+  themePreferenceAtom,
+  type ThemePreference,
 } from "../state";
+
+const THEME_CYCLE: ThemePreference[] = ["system", "dark", "light"];
+const THEME_LABEL: Record<ThemePreference, string> = {
+  system: "主题:跟随系统",
+  dark: "主题:深色",
+  light: "主题:浅色",
+};
+const THEME_ICON: Record<ThemePreference, string> = { system: "◐", dark: "☾", light: "☀" };
 
 function formatTime(ms: number): string {
   const date = new Date(ms);
@@ -28,7 +38,18 @@ export function Sidebar() {
   const store = useAtomValue(agentStoreAtom);
   const appInfo = useAtomValue(appInfoAtom);
   const setSettingsOpen = useSetAtom(settingsOpenAtom);
+  const [themePreference, setThemePreference] = useAtom(themePreferenceAtom);
   const [, setAgentStore] = useAtom(agentStoreAtom);
+
+  const cycleTheme = (): void => {
+    const next = THEME_CYCLE[(THEME_CYCLE.indexOf(themePreference) + 1) % THEME_CYCLE.length]!;
+    setThemePreference(next);
+    try {
+      localStorage.setItem("tenon:theme", next);
+    } catch {
+      // Storage unavailable — preference lives for this session only.
+    }
+  };
 
   const setSessionsList = useSetAtom(sessionsAtom);
 
@@ -76,7 +97,7 @@ export function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <span className="sidebar-logo">桥</span>
+        <span className="badge">榫</span>
         <span className="sidebar-title">Tenon</span>
         <span className="sidebar-version">{appInfo ? `v${appInfo.appVersion} · pi ${appInfo.piVersion}` : ""}</span>
       </div>
@@ -148,6 +169,14 @@ export function Sidebar() {
       <div className="sidebar-footer">
         <button type="button" className="sidebar-settings" onClick={() => setSettingsOpen(true)}>
           ⚙ 设置
+        </button>
+        <button
+          type="button"
+          className="sidebar-theme"
+          title={THEME_LABEL[themePreference]}
+          onClick={cycleTheme}
+        >
+          {THEME_ICON[themePreference]}
         </button>
         <span className="sidebar-status" title={store.status}>
           <span className="sidebar-status-dot" style={{ background: statusColor }} />
