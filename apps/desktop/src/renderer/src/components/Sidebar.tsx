@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { api } from "../lib/api";
 import { SessionTree } from "./SessionTree";
+import { TIcon } from "./TIcon";
 import {
   activeProjectAtom,
   activeProjectIdAtom,
@@ -101,7 +102,7 @@ export function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <span className="badge">榫</span>
+        <span className="badge"><TIcon size={15} /></span>
         <span className="sidebar-title">Tenon</span>
         <span className="sidebar-version">{appInfo ? `v${appInfo.appVersion} · pi ${appInfo.piVersion}` : ""}</span>
       </div>

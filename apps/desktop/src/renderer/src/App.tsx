@@ -8,6 +8,7 @@ import { SettingsDialog } from "./components/SettingsDialog";
 import { ReviewPane } from "./components/ReviewPane";
 import { FilesPane } from "./components/FilesPane";
 import { ApprovalCards } from "./components/ApprovalCards";
+import { TIcon } from "./components/TIcon";
 import {
   activeProjectAtom,
   activeProjectIdAtom,
@@ -39,7 +40,7 @@ function Welcome() {
   return (
     <div className="welcome">
       <div className="welcome-card">
-        <span className="badge">榫</span>
+        <span className="badge"><TIcon size={30} /></span>
         <div className="welcome-wordmark">TENON</div>
         <p>基于 pi 引擎的编程客户端。任意厂商模型、沙箱执行、代码图谱、全程可回溯。</p>
         <button type="button" className="btn btn-primary" onClick={() => void openProject()}>
@@ -71,7 +72,7 @@ function RightPane() {
         {tab === "files" && <FilesPane />}
         {tab === "trajectory" && (
           <div className="right-placeholder">
-            <span className="badge">◫</span>
+            <span className="badge"><TIcon size={20} /></span>
             <p>轨迹回放(时间轴 + 步进检查器)</p>
             <p className="right-placeholder-sub">M4:逐事件回放 · tokens/耗时 · 分支导航</p>
           </div>

@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Tenon logo">
+  <!--
+    Tenon logo — the letter T assembled from two wooden members.
+    Crossbar (horizontal) carries a mortise; the leg (vertical) rises into
+    it with an exposed tenon neck — the joint seam stays visible. 2.5D:
+    flat front faces with a dark depth extrusion down-right, light grain.
+  -->
+  <defs>
+    <clipPath id="tile"><rect x="0" y="0" width="512" height="512" rx="115"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#tile)">
+    <rect width="512" height="512" fill="#161a20"/>
+
+    <!-- depth extrusions (down-right 14px) -->
+    <rect x="126" y="124" width="288" height="100" rx="10" fill="#a5792a"/>
+    <rect x="218" y="244" width="104" height="170" rx="9" fill="#a5792a"/>
+
+    <!-- leg member (vertical): tenon neck + shaft, one piece -->
+    <rect x="234" y="184" width="44" height="46" rx="3" fill="#e8b84b"/>
+    <rect x="204" y="230" width="104" height="170" rx="9" fill="#e8b84b"/>
+
+    <!-- crossbar member (horizontal): front face covers the neck's top -->
+    <rect x="112" y="110" width="288" height="100" rx="10" fill="#e8b84b"/>
+
+    <!-- wood grain -->
+    <g stroke="#c08a2e" stroke-width="4" stroke-linecap="round" opacity="0.55">
+      <line x1="136" y1="136" x2="376" y2="136"/>
+      <line x1="150" y1="162" x2="222" y2="162"/>
+      <line x1="290" y1="162" x2="386" y2="162"/>
+      <line x1="136" y1="186" x2="200" y2="186"/>
+      <line x1="312" y1="186" x2="388" y2="186"/>
+      <line x1="222" y1="266" x2="290" y2="266"/>
+      <line x1="222" y1="322" x2="276" y2="322"/>
+    </g>
+    <!-- grain on the depth faces, quieter -->
+    <g stroke="#8a6322" stroke-width="4" stroke-linecap="round" opacity="0.5">
+      <line x1="404" y1="136" x2="404" y2="204"/>
+      <line x1="312" y1="266" x2="312" y2="392"/>
+    </g>
+  </g>
+
+  <rect x="2" y="2" width="508" height="508" rx="113" fill="none" stroke="#2a313c" stroke-width="3"/>
+</svg>

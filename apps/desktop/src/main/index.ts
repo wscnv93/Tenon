@@ -88,6 +88,7 @@ function createWindow(): void {
     backgroundColor: "#0d0f12",
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
     trafficLightPosition: { x: 16, y: 16 },
+    icon: join(app.getAppPath(), "build", "icon.png"),
     show: false,
     webPreferences: {
       preload: join(__dirname, "../preload/index.cjs"),
@@ -376,6 +377,13 @@ if (!app.requestSingleInstanceLock()) {
   void app.whenReady().then(() => {
     ensurePaths();
     ensureGateExtension();
+    // Brand icon for dev (packaged builds take the icon from build/icns).
+    if (process.platform === "darwin" && app.dock) {
+      const iconPath = join(app.getAppPath(), "build", "icon.png");
+      if (existsSync(iconPath)) {
+        app.dock.setIcon(iconPath);
+      }
+    }
     hostManager.setSender(makeWindowSender(() => mainWindow));
     registerIpc();
     createWindow();

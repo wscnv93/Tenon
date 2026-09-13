@@ -4,6 +4,7 @@ import { agentStoreAtom } from "../state";
 import type { AgentMessage, AssistantMessage, ToolCall } from "@protocol/pi-types";
 import { Markdown } from "./Markdown";
 import { RawDiff } from "./DiffView";
+import { TIcon } from "./TIcon";
 
 function textOf(content: string | Array<{ type: string; text?: string }>): string {
   if (typeof content === "string") return content;
@@ -163,7 +164,7 @@ export function ThreadView() {
     return (
       <div className="thread-empty" ref={scrollRef}>
         <div className="thread-empty-hero">
-          <span className="badge">榫</span>
+          <span className="badge"><TIcon size={26} /></span>
           <h2>Tenon 已就绪</h2>
           <p>在下方描述任务;配置厂商密钥后模型会自动出现。</p>
         </div>

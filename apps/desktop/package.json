@@ -6,10 +6,16 @@
   "main": "./out/main/index.js",
   "scripts": {
     "postinstall": "node ../../scripts/fetch-pi.mjs",
+    "icons": "node ../../scripts/gen-icons.mjs",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
+  },
+  "build": {
+    "appId": "com.tenon.desktop",
+    "productName": "Tenon",
+    "icon": "build/icon.png"
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "0.85.1",
@@ -17,6 +23,7 @@
     "simple-git": "^3.36.0"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@shikijs/stream": "^4.4.3",
     "@types/node": "^22.20.2",
     "@types/react": "^19.3.0",

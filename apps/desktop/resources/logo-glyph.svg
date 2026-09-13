@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="100 92 312 376" role="img" aria-label="Tenon glyph">
+  <!-- glyph-only mark for inline UI use; seams darker via patina mix -->
+  <g>
+    <rect x="112" y="104" width="288" height="100" rx="9" fill="currentColor"/>
+    <rect x="206" y="138" width="100" height="222" rx="8" fill="currentColor"/>
+    <rect x="232" y="352" width="48" height="56" rx="4" fill="currentColor"/>
+    <rect x="140" y="388" width="232" height="64" rx="10" fill="currentColor" opacity="0.55"/>
+    <rect x="224" y="388" width="64" height="22" fill="var(--badge-bg, #1a1e25)"/>
+    <line x1="206" y1="204" x2="306" y2="204" stroke="var(--badge-bg, #1a1e25)" stroke-width="7"/>
+    <line x1="206" y1="356" x2="306" y2="356" stroke="var(--badge-bg, #1a1e25)" stroke-width="7"/>
+  </g>
+</svg>
