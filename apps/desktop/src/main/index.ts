@@ -363,7 +363,12 @@ function registerIpc(): void {
   handle("terminal:dispose", ({ id }) => terminalService.dispose(id));
   handle("files:list", ({ projectPath, dir }) => ({ entries: listProjectDir(projectPath, dir) }));
 
-  handle("settings:getUpdateRepo", () => ({ repo: loadSettings().updateRepo ?? "" }));
+  const DEFAULT_UPDATE_REPO = "wscnv93/Tenon";
+  handle("settings:getUpdateRepo", () => ({ repo: loadSettings().updateRepo || DEFAULT_UPDATE_REPO }));
+  handle("update:check", async ({ repo }) => {
+    sendUpdateProgress("checking");
+    return checkUpdate(repo || DEFAULT_UPDATE_REPO);
+  });
   handle("settings:setUpdateRepo", ({ repo }) => {
     const settings = loadSettings();
     saveSettings({ ...settings, updateRepo: repo.trim() });
@@ -375,7 +380,7 @@ function registerIpc(): void {
   handle("update:install", async ({ repo }) => {
     try {
       sendUpdateProgress("checking");
-      const check = await checkUpdate(repo);
+      const check = await checkUpdate(repo || DEFAULT_UPDATE_REPO);
       if (check.error) {
         sendUpdateProgress("error", undefined, check.error);
         return;
