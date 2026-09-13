@@ -3,6 +3,11 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { api } from "../lib/api";
 import { statusLabel } from "@protocol/diff";
 import type { FileChange, GitStatus } from "@protocol/ipc";
+
+interface DirEntry {
+  name: string;
+  isDir: boolean;
+}
 import { activeProjectAtom, agentSettledTickAtom, composerInsertAtom, reviewFocusAtom, rightTabAtom } from "../state";
 
 interface TreeNode {
@@ -88,7 +93,9 @@ export function FilesPane() {
   };
 
   if (!project) return <div className="pane-empty">未选择项目</div>;
-  if (status && !status.isRepo) return <div className="pane-empty">当前项目不是 Git 仓库</div>;
+  if (status && !status.isRepo) {
+    return <ProjectBrowser projectPath={project.path} />;
+  }
 
   const renderNode = (node: TreeNode, depth: number): React.ReactNode => {
     if (node.file && node.children.size === 0) {
@@ -171,6 +178,87 @@ export function FilesPane() {
       {tree && status && status.changes.length > 0 && (
         <div className="files-tree">{sortedChildren(tree).map((child) => renderNode(child, 0))}</div>
       )}
+    </div>
+  );
+}
+
+
+/**
+ * Non-git fallback: a lazy directory browser so the pane never dead-ends.
+ */
+function ProjectBrowser({ projectPath }: { projectPath: string }) {
+  const setInsert = useSetAtom(composerInsertAtom);
+  const [root, setRoot] = useState<DirEntry[] | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, DirEntry[] | "loading">>({});
+
+  useEffect(() => {
+    setExpanded({});
+    void api.listProjectDir(projectPath).then((result) => setRoot(result.entries as DirEntry[]));
+  }, [projectPath]);
+
+  const toggleDir = async (rel: string): Promise<void> => {
+    if (expanded[rel]) {
+      setExpanded((prev) => {
+        const next = { ...prev };
+        delete next[rel];
+        return next;
+      });
+      return;
+    }
+    setExpanded((prev) => ({ ...prev, [rel]: "loading" }));
+    const result = await api.listProjectDir(projectPath, rel);
+    setExpanded((prev) => ({ ...prev, [rel]: result.entries as DirEntry[] }));
+  };
+
+  const renderEntries = (entries: DirEntry[], depth: number, parent = ""): React.ReactNode =>
+    entries.map((entry) => {
+      const rel = parent ? `${parent}/${entry.name}` : entry.name;
+      if (entry.isDir) {
+        const children = expanded[rel];
+        return (
+          <div key={rel}>
+            <button type="button" className="dir-row" style={{ paddingLeft: 4 + depth * 14 }} onClick={() => void toggleDir(rel)}>
+              <span className="tool-caret">{children ? "▾" : "▸"}</span>
+              <span className="dir-name">{entry.name}</span>
+            </button>
+            {children === "loading" && <div className="pane-note" style={{ paddingLeft: 8 + depth * 14 }}>读取…</div>}
+            {Array.isArray(children) && renderEntries(children, depth + 1, rel)}
+          </div>
+        );
+      }
+      return (
+        <div key={rel} className="file-row" style={{ paddingLeft: 4 + depth * 14 }}>
+          <button
+            type="button"
+            className="file-row-main"
+            title={`${rel} — 点击以 @路径 插入输入框`}
+            onClick={() => setInsert({ text: `@${rel} `, nonce: Date.now() })}
+          >
+            <span className="file-row-path">{entry.name}</span>
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            title="以 @路径 插入输入框"
+            onClick={() => setInsert({ text: `@${rel} `, nonce: Date.now() })}
+          >
+            @
+          </button>
+        </div>
+      );
+    });
+
+  return (
+    <div className="files-pane">
+      <div className="review-toolbar">
+        <span className="pane-label">文件浏览</span>
+        <span className="review-totals">当前项目未初始化 Git,仅提供文件浏览</span>
+      </div>
+      <div className="files-tree">
+        {root === null && <div className="pane-note">读取目录…</div>}
+        {root?.length === 0 && <div className="pane-empty">目录为空</div>}
+        {root && renderEntries(root, 0)}
+      </div>
     </div>
   );
 }

@@ -51,6 +51,7 @@ export const api = {
   getExecMode: () => invoke("agent:getExecMode", undefined as never),
   setExecMode: (mode: string) => invoke("agent:setExecMode", { mode: mode as never }),
   getEntries: (projectPath: string) => invoke("agent:getEntries", { projectPath }),
+  listProjectDir: (projectPath: string, dir?: string) => invoke("files:list", { projectPath, dir }),
   extensionUiResponse: (projectPath: string, id: string, response: Record<string, unknown>) =>
     invoke("agent:extensionUiResponse", { projectPath, id, response }),
 };

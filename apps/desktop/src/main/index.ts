@@ -9,6 +9,7 @@ import { listSessions } from "./sessions.js";
 import * as git from "./git-service.js";
 import { DEFAULT_MODE, ensureGateExtension, readModeFile, writeModeFile } from "./gate-extension.js";
 import { TerminalService, TERMINAL_EVENT_CHANNEL } from "./terminal-service.js";
+import { listProjectDir } from "./files-browse.js";
 import type {
   TenonEvent,
   TenonInvokeChannel,
@@ -351,6 +352,7 @@ function registerIpc(): void {
   handle("terminal:input", ({ id, data }) => terminalService.input(id, data));
   handle("terminal:resize", ({ id, cols, rows }) => terminalService.resize(id, cols, rows));
   handle("terminal:dispose", ({ id }) => terminalService.dispose(id));
+  handle("files:list", ({ projectPath, dir }) => ({ entries: listProjectDir(projectPath, dir) }));
 
   // ---------------------------------------------------------------- git
   handle("git:status", ({ projectPath }) => git.gitStatus(projectPath));

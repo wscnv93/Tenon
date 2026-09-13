@@ -229,6 +229,10 @@ export interface TenonInvokeMap {
   "terminal:input": { in: { id: string; data: string }; out: void };
   "terminal:resize": { in: { id: string; cols: number; rows: number }; out: void };
   "terminal:dispose": { in: { id: string }; out: void };
+  "files:list": {
+    in: { projectPath: string; dir?: string };
+    out: { entries: Array<{ name: string; isDir: boolean }> };
+  };
   "agent:extensionUiResponse": {
     in: { projectPath: string; id: string; response: Record<string, unknown> };
     out: void;
