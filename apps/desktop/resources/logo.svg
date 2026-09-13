@@ -18,9 +18,9 @@
     <rect x="218" y="244" width="104" height="170" rx="9" fill="#a5792a"/>
 
     <!-- leg member (vertical): tenon neck + shaft as ONE path —
-         sharp shoulder steps, rounded only at the foot; no junction seam -->
+         rounded shoulders (r9) + rounded foot; no junction seam -->
     <path
-      d="M 234 184 H 278 V 230 H 304 V 391 Q 304 400 295 400 H 213 Q 204 400 204 391 V 230 H 234 Z"
+      d="M 234 184 H 278 V 230 H 295 Q 304 230 304 239 V 391 Q 304 400 295 400 H 213 Q 204 400 204 391 V 239 Q 204 230 213 230 H 234 Z"
       fill="#e8b84b"
     />
 

@@ -20,7 +20,7 @@ export function TIcon({ size = 16, style }: { size?: number; style?: CSSProperti
         <rect x="126" y="124" width="288" height="100" rx="10" fill="#a5792a" />
         <rect x="218" y="244" width="104" height="170" rx="9" fill="#a5792a" />
         <path
-          d="M 234 184 H 278 V 230 H 304 V 391 Q 304 400 295 400 H 213 Q 204 400 204 391 V 230 H 234 Z"
+          d="M 234 184 H 278 V 230 H 295 Q 304 230 304 239 V 391 Q 304 400 295 400 H 213 Q 204 400 204 391 V 239 Q 204 230 213 230 H 234 Z"
           fill="#e8b84b"
         />
         <rect x="112" y="110" width="288" height="100" rx="10" fill="#e8b84b" />
