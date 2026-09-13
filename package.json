@@ -1,0 +1,17 @@
+{
+  "name": "tenon",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Tenon — a Codex-style desktop client built on the pi coding agent",
+  "license": "MIT",
+  "packageManager": "pnpm@10.30.3",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @tenon/desktop dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test"
+  }
+}
