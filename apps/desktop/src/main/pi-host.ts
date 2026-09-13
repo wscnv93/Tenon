@@ -54,6 +54,8 @@ export class PiHost {
   private status: HostStatus = "stopped";
   private startPromise: Promise<PiHost> | null = null;
   private cachedState: RpcSessionState | null = null;
+  /** Touched on every interaction; drives LRU eviction of background hosts. */
+  lastUsedAt = Date.now();
 
   constructor(
     readonly projectPath: string,
@@ -74,6 +76,7 @@ export class PiHost {
   }
 
   async ensure(resumeSessionPath?: string): Promise<PiHost> {
+    this.lastUsedAt = Date.now();
     if (this.client && this.status === "ready") {
       if (resumeSessionPath && this.cachedState?.sessionFile !== resumeSessionPath) {
         await this.rpc({ type: "switch_session", sessionPath: resumeSessionPath });
@@ -144,6 +147,7 @@ export class PiHost {
   }
 
   async rpc<T = any>(command: RpcCommand, timeoutMs?: number): Promise<T> {
+    this.lastUsedAt = Date.now();
     if (!this.client) throw new Error(`pi host for ${this.projectPath} is not running`);
     return this.client.request<T>(command, timeoutMs);
   }
@@ -163,6 +167,20 @@ export class PiHost {
 export class PiHostManager {
   private hosts = new Map<string, PiHost>();
   private sender: Sender = () => {};
+  private activePath: string | null = null;
+  private sweeper: NodeJS.Timeout | null = null;
+
+  /** Idle background engines are stopped after this long. */
+  private readonly idleEvictMs = Number(process.env.TENON_ENGINE_IDLE_MS ?? 180_000);
+  /** At most this many engines stay warm (the active one is always kept). */
+  private readonly maxEngines = Number(process.env.TENON_ENGINE_MAX ?? 3);
+  private readonly sweepIntervalMs = 20_000;
+
+  constructor() {
+    // Recycle background engines so N projects never mean N resident processes.
+    this.sweeper = setInterval(() => this.sweep(), this.sweepIntervalMs);
+    this.sweeper.unref();
+  }
 
   setSender(sender: Sender): void {
     this.sender = sender;
@@ -172,7 +190,35 @@ export class PiHostManager {
     return this.hosts.get(projectPath);
   }
 
+  /** Returns engines that are running right now. */
+  listRunning(): PiHost[] {
+    return [...this.hosts.values()].filter((host) => host.running);
+  }
+
+  private sweep(): void {
+    const now = Date.now();
+    const candidates = [...this.hosts.entries()]
+      .filter(([path, host]) => host.running && path !== this.activePath)
+      .filter(([, host]) => !(host.state?.isStreaming ?? false))
+      .sort((a, b) => a[1].lastUsedAt - b[1].lastUsedAt);
+
+    const reasons: string[] = [];
+    for (const [path, host] of candidates) {
+      const idleFor = now - host.lastUsedAt;
+      const overCap = this.listRunning().length >= this.maxEngines;
+      if (idleFor < this.idleEvictMs && !overCap) continue;
+      reasons.push(`${path} (idle ${Math.round(idleFor / 1000)}s${overCap ? ", over cap" : ""})`);
+      void host.stop().then(() => {
+        if (this.hosts.get(path) === host) this.hosts.delete(path);
+      });
+    }
+    if (reasons.length > 0) {
+      console.log(`[tenon] recycled idle engines: ${reasons.join("; ")}`);
+    }
+  }
+
   async ensure(projectPath: string, resumeSessionPath?: string): Promise<PiHost> {
+    this.activePath = projectPath;
     let host = this.hosts.get(projectPath);
     if (!host) {
       host = new PiHost(projectPath, this.sender);
@@ -182,6 +228,7 @@ export class PiHostManager {
   }
 
   async stopAll(): Promise<void> {
+    if (this.sweeper) clearInterval(this.sweeper);
     await Promise.allSettled([...this.hosts.values()].map((host) => host.stop()));
     this.hosts.clear();
   }
