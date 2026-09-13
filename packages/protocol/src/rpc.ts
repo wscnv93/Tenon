@@ -25,12 +25,15 @@ import type {
 } from "./pi-types.js";
 
 export interface PiSpawnOptions {
-  /** Executable that runs the pi cli bundle (node, bun, electron-with-ELECTRON_RUN_AS_NODE...). */
+  /** Executable that runs the engine: the standalone pi binary, or a runtime for the cli bundle. */
   command: string;
   /** Extra args inserted before the cli bundle path (e.g. ["run-node"]). */
   commandArgs?: string[];
-  /** Absolute path of the pi cli entry (`dist/cli.js`). */
-  cliPath: string;
+  /**
+   * Absolute path of the pi cli bundle (dist/cli.js). Empty/undefined when
+   * `command` is the standalone pi binary (it takes --mode rpc directly).
+   */
+  cliPath?: string;
   /** Project working directory for the agent. */
   cwd: string;
   env?: Record<string, string | undefined>;
@@ -94,7 +97,7 @@ export class PiRpcClient extends EventEmitter {
     if (this.process) throw new Error("pi rpc process already started");
     const args = [
       ...(this.options.commandArgs ?? []),
-      this.options.cliPath,
+      ...(this.options.cliPath ? [this.options.cliPath] : []),
       "--mode",
       "rpc",
       ...(this.options.provider ? ["--provider", this.options.provider] : []),

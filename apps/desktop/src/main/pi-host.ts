@@ -1,5 +1,7 @@
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { app, type BrowserWindow } from "electron";
 import { VERSION as PI_VERSION } from "@earendil-works/pi-coding-agent";
 import { PiRpcClient, type PiEvent } from "@protocol/rpc";
 import type { RpcCommand, RpcSessionState } from "@protocol/pi-types";
@@ -26,21 +28,37 @@ type Sender = (event: TenonEvent) => void;
 interface PiRuntime {
   command: string;
   commandArgs: string[];
-  cliPath: string;
+  /** Absent when `command` is the standalone pi binary. */
+  cliPath?: string;
 }
 
 let cachedRuntime: PiRuntime | null = null;
 
+/**
+ * Resolution order:
+ * 1. TENON_PI_BIN env (explicit override / system pi for debugging)
+ * 2. vendored standalone binary (apps/desktop/vendor/pi-<platform>/pi) —
+ *    a Bun-compiled single file; spawning it never touches LaunchServices,
+ *    so no Dock registration/bounce from engine children
+ * 3. fallback: the node_modules cli bundle run by Electron-as-Node (dev only)
+ */
 export function resolvePiRuntime(): PiRuntime {
   if (cachedRuntime) return cachedRuntime;
-  // pi's package.json exports map has no "require" condition, so
-  // createRequire().resolve() fails; ESM resolution is the only route.
+  const override = process.env.TENON_PI_BIN;
+  if (override && existsSync(override)) {
+    cachedRuntime = { command: override, commandArgs: [] };
+    return cachedRuntime;
+  }
+  const vendorBinary = join(app.getAppPath(), "vendor", `pi-${process.platform}-${process.arch}`, "pi");
+  if (existsSync(vendorBinary)) {
+    cachedRuntime = { command: vendorBinary, commandArgs: [] };
+    return cachedRuntime;
+  }
   const entry = fileURLToPath(import.meta.resolve("@earendil-works/pi-coding-agent"));
-  const cliPath = join(dirname(entry), "cli.js");
   cachedRuntime = {
     command: process.execPath,
     commandArgs: [],
-    cliPath,
+    cliPath: join(dirname(entry), "cli.js"),
   };
   return cachedRuntime;
 }
