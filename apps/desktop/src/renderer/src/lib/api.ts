@@ -48,4 +48,8 @@ export const api = {
     invoke("git:discardHunk", { projectPath, path, patch }),
   gitStageAll: (projectPath: string) => invoke("git:stageAll", { projectPath }),
   gitUnstageAll: (projectPath: string) => invoke("git:unstageAll", { projectPath }),
+  getExecMode: () => invoke("agent:getExecMode", undefined as never),
+  setExecMode: (mode: string) => invoke("agent:setExecMode", { mode: mode as never }),
+  extensionUiResponse: (projectPath: string, id: string, response: Record<string, unknown>) =>
+    invoke("agent:extensionUiResponse", { projectPath, id, response }),
 };

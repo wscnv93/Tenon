@@ -7,6 +7,7 @@ import { authStatus, removeCredential, setApiKey } from "./auth-store.js";
 import { getPiVersion, hostManager, makeWindowSender, sendUserMessage } from "./pi-host.js";
 import { listSessions } from "./sessions.js";
 import * as git from "./git-service.js";
+import { DEFAULT_MODE, ensureGateExtension, readModeFile, writeModeFile } from "./gate-extension.js";
 import type {
   TenonEvent,
   TenonInvokeChannel,
@@ -323,6 +324,17 @@ function registerIpc(): void {
     }
   });
 
+  handle("agent:getExecMode", () => ({ mode: readModeFile() }));
+
+  handle("agent:setExecMode", ({ mode }) => {
+    writeModeFile(mode);
+  });
+
+  handle("agent:extensionUiResponse", ({ projectPath, id, response }) => {
+    const host = hostManager.get(projectPath);
+    host?.rpcClientWrite({ type: "extension_ui_response", id, ...response });
+  });
+
   // ---------------------------------------------------------------- git
   handle("git:status", ({ projectPath }) => git.gitStatus(projectPath));
 
@@ -363,6 +375,7 @@ if (!app.requestSingleInstanceLock()) {
 
   void app.whenReady().then(() => {
     ensurePaths();
+    ensureGateExtension();
     hostManager.setSender(makeWindowSender(() => mainWindow));
     registerIpc();
     createWindow();

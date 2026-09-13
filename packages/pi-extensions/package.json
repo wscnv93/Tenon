@@ -1,0 +1,15 @@
+{
+  "name": "@tenon/pi-extensions",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Tenon extensions loaded inside the pi process (sandbox gate + approvals)",
+  "dependencies": {
+    "@anthropic-ai/sandbox-runtime": "0.0.76"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "0.85.1",
+    "@types/node": "^22.20.2",
+    "typescript": "~5.9.3"
+  }
+}

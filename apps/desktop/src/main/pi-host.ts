@@ -148,6 +148,12 @@ export class PiHost {
     return this.client.request<T>(command, timeoutMs);
   }
 
+  /** Fire-and-forget protocol write (extension_ui_response etc.). */
+  rpcClientWrite(payload: unknown): void {
+    if (!this.client) return;
+    this.client.write(payload);
+  }
+
   async refreshState(): Promise<RpcSessionState> {
     this.cachedState = await this.rpc<RpcSessionState>({ type: "get_state" });
     return this.cachedState;

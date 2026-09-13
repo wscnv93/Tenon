@@ -7,6 +7,7 @@ import {
   activeProjectIdAtom,
   agentStoreAtom,
   appInfoAtom,
+  emptyAgentStore,
   projectsAtom,
   sessionsAtom,
   settingsOpenAtom,
@@ -77,7 +78,7 @@ export function Sidebar() {
     const result = await api.removeProject(id);
     setProjects(result.projects);
     if (result.activeProjectId) setActiveId(result.activeProjectId);
-    else setAgentStore({ status: "stopped", state: null, messages: [], toolRuns: {}, queue: { steering: [], followUp: [] }, notices: [] });
+    else setAgentStore({ ...emptyAgentStore });
   };
 
   const newThread = async (): Promise<void> => {

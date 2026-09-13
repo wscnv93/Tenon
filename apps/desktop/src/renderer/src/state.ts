@@ -35,6 +35,15 @@ export interface Notice {
   text: string;
 }
 
+export interface PendingUiRequest {
+  id: string;
+  kind: "select" | "confirm" | "input" | "editor";
+  title: string;
+  message?: string;
+  options?: string[];
+  placeholder?: string;
+}
+
 export interface AgentStore {
   status: HostStatus;
   error?: string;
@@ -43,6 +52,8 @@ export interface AgentStore {
   toolRuns: Record<string, ToolRun>;
   queue: { steering: string[]; followUp: string[] };
   notices: Notice[];
+  /** Open extension UI requests (approval cards). */
+  pendingUi: PendingUiRequest[];
 }
 
 export const emptyAgentStore: AgentStore = {
@@ -52,6 +63,7 @@ export const emptyAgentStore: AgentStore = {
   toolRuns: {},
   queue: { steering: [], followUp: [] },
   notices: [],
+  pendingUi: [],
 };
 
 let noticeSeq = 0;
@@ -306,6 +318,11 @@ export const composerInsertAtom = atom<{ text: string; nonce: number } | null>(n
 /** Bumped on every agent_settled so panes can refresh turn-scoped data. */
 export const agentSettledTickAtom = atom(0);
 
+export const execModeAtom = atom<{ mode: "read-only" | "workspace-write" | "full"; nonce: number }>({
+  mode: "workspace-write",
+  nonce: 0,
+});
+
 // ---------------------------------------------------------------------------
 // Theme: "system" follows the OS, otherwise explicit dark/light.
 // ---------------------------------------------------------------------------
@@ -340,5 +357,37 @@ export function agentEventToStore(event: TenonEvent, projectPath: string | null,
     if (!projectPath || event.projectPath !== projectPath) return current;
     return applyAgentEvent(current, event.event);
   }
+  if (event.kind === "extensionUi") {
+    if (!projectPath || event.projectPath !== projectPath) return current;
+    const request = event.request as {
+      id: string;
+      method: string;
+      title?: string;
+      message?: string;
+      options?: string[];
+      placeholder?: string;
+    };
+    if (typeof request?.id !== "string") return current;
+    const kind = request.method as PendingUiRequest["kind"];
+    if (kind !== "select" && kind !== "confirm" && kind !== "input" && kind !== "editor") return current;
+    return {
+      ...current,
+      pendingUi: [
+        ...current.pendingUi,
+        {
+          id: request.id,
+          kind,
+          title: request.title ?? "",
+          message: request.message,
+          options: request.options,
+          placeholder: request.placeholder,
+        },
+      ],
+    };
+  }
   return current;
+}
+
+export function resolvePendingUi(store: AgentStore, id: string): AgentStore {
+  return { ...store, pendingUi: store.pendingUi.filter((request) => request.id !== id) };
 }

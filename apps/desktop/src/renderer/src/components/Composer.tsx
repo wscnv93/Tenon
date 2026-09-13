@@ -6,11 +6,14 @@ import {
   agentStoreAtom,
   authStatusAtom,
   composerInsertAtom,
+  execModeAtom,
   modelsAtom,
   modelsLoadingAtom,
   settingsOpenAtom,
   thinkingLevelsAtom,
 } from "../state";
+import { EXEC_MODE_LABEL } from "@protocol/ipc";
+import type { ExecMode } from "@protocol/ipc";
 import type { Model } from "@protocol/pi-types";
 
 function ModelPicker({ onPicked }: { onPicked: () => void }) {
@@ -167,6 +170,7 @@ export function Composer() {
   const [text, setText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const insertSignal = useAtomValue(composerInsertAtom);
+  const [execMode, setExecMode] = useAtom(execModeAtom);
 
   // Files pane "insert @path" requests.
   useEffect(() => {
@@ -174,6 +178,20 @@ export function Composer() {
     setText((prev) => prev + insertSignal.text);
     textareaRef.current?.focus();
   }, [insertSignal]);
+
+  // Load the persisted execution mode once.
+  useEffect(() => {
+    void api.getExecMode().then((result) => {
+      setExecMode({ mode: result.mode, nonce: Date.now() });
+    });
+  }, [setExecMode]);
+
+  const MODE_CYCLE: ExecMode[] = ["read-only", "workspace-write", "full"];
+  const cycleMode = (): void => {
+    const next = MODE_CYCLE[(MODE_CYCLE.indexOf(execMode.mode) + 1) % MODE_CYCLE.length]!;
+    setExecMode({ mode: next, nonce: Date.now() });
+    void api.setExecMode(next);
+  };
 
   const streaming = store.state?.isStreaming ?? false;
   const noKeys = auth.length > 0 && auth.every((entry) => !entry.configured);
@@ -202,6 +220,12 @@ export function Composer() {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
       void send();
+      return;
+    }
+    // Shift+Tab cycles the execution mode (Codex/ZCode convention).
+    if (event.key === "Tab" && event.shiftKey) {
+      event.preventDefault();
+      cycleMode();
     }
   };
 
@@ -239,6 +263,14 @@ export function Composer() {
         />
         <div className="composer-actions">
           <ModelPicker onPicked={() => textareaRef.current?.focus()} />
+          <button
+            type="button"
+            className={`chip chip-mode mode-${execMode.mode}`}
+            title="执行模式(Shift+Tab 切换)"
+            onClick={cycleMode}
+          >
+            {EXEC_MODE_LABEL[execMode.mode]}
+          </button>
           <select
             className="chip chip-select"
             value={store.state?.thinkingLevel ?? "low"}

@@ -173,6 +173,18 @@ export type TenonEvent =
   | { kind: "settingsChanged"; projects: TenonProject[]; activeProjectId: string | null };
 
 // ---------------------------------------------------------------------------
+// Execution modes (Tenon gate extension reads this file per tool call)
+// ---------------------------------------------------------------------------
+
+export type ExecMode = "read-only" | "workspace-write" | "full";
+
+export const EXEC_MODE_LABEL: Record<ExecMode, string> = {
+  "read-only": "只读",
+  "workspace-write": "确认改动",
+  full: "完全访问",
+};
+
+// ---------------------------------------------------------------------------
 // Invoke channel map (single source of truth for typed ipc)
 // ---------------------------------------------------------------------------
 
@@ -208,6 +220,12 @@ export interface TenonInvokeMap {
   };
   "review:sendComments": {
     in: { projectPath: string; comments: ReviewComment[] };
+    out: void;
+  };
+  "agent:getExecMode": { in: void; out: { mode: ExecMode } };
+  "agent:setExecMode": { in: { mode: ExecMode }; out: void };
+  "agent:extensionUiResponse": {
+    in: { projectPath: string; id: string; response: Record<string, unknown> };
     out: void;
   };
 

@@ -7,6 +7,7 @@ import { Composer } from "./components/Composer";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { ReviewPane } from "./components/ReviewPane";
 import { FilesPane } from "./components/FilesPane";
+import { ApprovalCards } from "./components/ApprovalCards";
 import {
   activeProjectAtom,
   activeProjectIdAtom,
@@ -222,6 +223,7 @@ export default function App() {
               </button>
             </div>
             <ThreadView />
+            <ApprovalCards />
             <Composer />
           </main>
           <RightPane />
