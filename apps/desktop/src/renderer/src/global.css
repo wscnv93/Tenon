@@ -564,17 +564,25 @@ select {
 
 /* user input carries a patina pin on its left joint */
 
+.turn {
+  margin-bottom: 26px;
+}
+
 .msg-user {
-  margin-bottom: 18px;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
 }
 
 .msg-user-text {
+  max-width: 72%;
   background: var(--bg-elevated);
   border: 1px solid var(--seam);
-  border-left: 2px solid var(--accent);
+  border-right: 2px solid var(--accent);
   border-radius: var(--r);
   padding: 8px 12px;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .msg-assistant {
@@ -2179,4 +2187,66 @@ select {
 
 ::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* process group — collapsed intermediate steps per Codex layout */
+
+.process-group {
+  margin-bottom: 8px;
+  border: 1px solid var(--seam);
+  border-radius: var(--r-sm);
+  background: var(--bg-panel);
+  overflow: hidden;
+}
+
+.process-group.process-live {
+  border-color: var(--seam-strong);
+}
+
+.process-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: left;
+}
+
+.process-header:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.process-peek {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-family: var(--mono);
+}
+
+.process-header .tool-caret {
+  margin-left: auto;
+}
+
+.process-body {
+  border-top: 1px solid var(--seam);
+  padding: 8px 10px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.process-text {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.process-text .markdown {
+  font-size: 12.5px;
 }
