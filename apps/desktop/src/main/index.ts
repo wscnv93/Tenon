@@ -63,6 +63,22 @@ function createWindow(): void {
   }
 }
 
+/**
+ * Credential changes are not reliably picked up by a running pi process
+ * (verified experimentally), so restart every running host after auth edits.
+ * The handler only returns once restarts complete, which keeps the renderer's
+ * follow-up getAvailableModels call deterministic.
+ */
+async function restartRunningHosts(): Promise<void> {
+  const settings = loadSettings();
+  for (const project of settings.projects) {
+    const host = hostManager.get(project.path);
+    if (!host?.running) continue;
+    await host.stop();
+    await hostManager.ensure(project.path, project.lastSessionPath);
+  }
+}
+
 function registerIpc(): void {
   handle("app:info", () => {
     const paths = getPaths();
@@ -120,8 +136,14 @@ function registerIpc(): void {
   });
 
   handle("auth:status", () => authStatus());
-  handle("auth:setApiKey", ({ provider, key }) => setApiKey(provider, key));
-  handle("auth:remove", ({ provider }) => removeCredential(provider));
+  handle("auth:setApiKey", async ({ provider, key }) => {
+    setApiKey(provider, key);
+    await restartRunningHosts();
+  });
+  handle("auth:remove", async ({ provider }) => {
+    removeCredential(provider);
+    await restartRunningHosts();
+  });
 
   const requireHost = async (projectPath: string) => hostManager.ensure(projectPath);
 

@@ -67,6 +67,51 @@ select {
   grid-template-columns: 260px minmax(0, 1fr) 380px;
   height: 100vh;
   padding-top: 38px; /* hidden title bar area on macOS */
+  transition: grid-template-columns 0.18s ease;
+}
+
+/* pane collapse */
+.app-l {
+  grid-template-columns: 0 minmax(0, 1fr) 380px;
+}
+
+.app-r {
+  grid-template-columns: 260px minmax(0, 1fr) 0;
+}
+
+.app-l.app-r {
+  grid-template-columns: 0 minmax(0, 1fr) 0;
+}
+
+.app .sidebar,
+.app .right-pane {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.app-l .sidebar {
+  border-right: none;
+}
+
+.app-r .right-pane {
+  border-left: none;
+}
+
+.pane-toggle {
+  font-size: 12px;
+  color: var(--text-dim);
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
+
+.pane-toggle:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.pane-toggle-right {
+  margin-left: auto;
 }
 
 .welcome {
@@ -910,6 +955,10 @@ select {
   color: var(--text-faint);
   font-size: 12px;
   text-align: center;
+}
+
+.popover-error {
+  color: var(--danger);
 }
 
 .popover-group {

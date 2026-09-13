@@ -12,8 +12,10 @@ import {
   appInfoAtom,
   authStatusAtom,
   emptyAgentStore,
+  leftCollapsedAtom,
   modelsAtom,
   projectsAtom,
+  rightCollapsedAtom,
   sessionsAtom,
   agentEventToStore,
 } from "./state";
@@ -74,10 +76,29 @@ export default function App() {
   const setSessions = useSetAtom(sessionsAtom);
   const setModels = useSetAtom(modelsAtom);
   const [agentStore, setAgentStore] = useAtom(agentStoreAtom);
+  const [leftCollapsed, setLeftCollapsed] = useAtom(leftCollapsedAtom);
+  const [rightCollapsed, setRightCollapsed] = useAtom(rightCollapsedAtom);
   const activePathRef = useRef<string | null>(null);
   const bootstrappedRef = useRef(false);
 
   activePathRef.current = activeProject?.path ?? null;
+
+  // Pane collapse shortcuts: ⌘B left, ⌘\ right.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      const mod = event.metaKey || event.ctrlKey;
+      if (!mod || event.altKey || event.shiftKey) return;
+      if (event.key === "b" || event.key === "B") {
+        event.preventDefault();
+        setLeftCollapsed(!leftCollapsed);
+      } else if (event.key === "\\") {
+        event.preventDefault();
+        setRightCollapsed(!rightCollapsed);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [leftCollapsed, rightCollapsed, setLeftCollapsed, setRightCollapsed]);
 
   // Bootstrap: static data + event subscription.
   useEffect(() => {
@@ -148,12 +169,28 @@ export default function App() {
       {projects.length === 0 ? (
         <Welcome />
       ) : (
-        <div className="app">
+        <div className={`app ${leftCollapsed ? "app-l" : ""} ${rightCollapsed ? "app-r" : ""}`}>
           <Sidebar />
           <main className="center">
             <div className="center-header">
+              <button
+                type="button"
+                className="icon-btn pane-toggle"
+                title={leftCollapsed ? "展开侧栏 (⌘B)" : "折叠侧栏 (⌘B)"}
+                onClick={() => setLeftCollapsed(!leftCollapsed)}
+              >
+                {leftCollapsed ? "»" : "«"}
+              </button>
               <span className="center-title">{activeProject?.name ?? "Tenon"}</span>
               <span className="center-sub">{activeProject?.path}</span>
+              <button
+                type="button"
+                className="icon-btn pane-toggle pane-toggle-right"
+                title={rightCollapsed ? "展开检视栏 (⌘\\)" : "折叠检视栏 (⌘\\)"}
+                onClick={() => setRightCollapsed(!rightCollapsed)}
+              >
+                {rightCollapsed ? "«" : "»"}
+              </button>
             </div>
             <ThreadView />
             <Composer />

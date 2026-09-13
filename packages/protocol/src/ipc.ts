@@ -79,9 +79,10 @@ export const PROVIDER_CATALOG: ReadonlyArray<{
   { id: "google", label: "Google Gemini", keyEnv: "GEMINI_API_KEY", docsUrl: "https://aistudio.google.com/apikey" },
   { id: "deepseek", label: "DeepSeek", keyEnv: "DEEPSEEK_API_KEY", docsUrl: "https://platform.deepseek.com/api_keys" },
   { id: "zai", label: "Z.ai (GLM)", keyEnv: "ZAI_API_KEY", docsUrl: "https://z.ai/manage/apikey" },
-  { id: "moonshot", label: "Moonshot (Kimi)", keyEnv: "MOONSHOT_API_KEY" },
+  { id: "moonshotai", label: "Moonshot (Kimi)", keyEnv: "MOONSHOT_API_KEY" },
+  { id: "kimi-coding", label: "Kimi Coding 订阅", keyEnv: "KIMI_API_KEY" },
   { id: "minimax", label: "MiniMax", keyEnv: "MINIMAX_API_KEY" },
-  { id: "qwen", label: "Qwen", keyEnv: "QWEN_API_KEY" },
+  { id: "qwen-token-plan", label: "Qwen", keyEnv: "QWEN_API_KEY" },
   { id: "openrouter", label: "OpenRouter", keyEnv: "OPENROUTER_API_KEY", docsUrl: "https://openrouter.ai/keys" },
   { id: "xai", label: "xAI (Grok)", keyEnv: "XAI_API_KEY" },
   { id: "groq", label: "Groq", keyEnv: "GROQ_API_KEY" },
@@ -89,6 +90,8 @@ export const PROVIDER_CATALOG: ReadonlyArray<{
   { id: "mistral", label: "Mistral", keyEnv: "MISTRAL_API_KEY" },
   { id: "fireworks", label: "Fireworks", keyEnv: "FIREWORKS_API_KEY" },
   { id: "together", label: "Together AI", keyEnv: "TOGETHER_API_KEY" },
+  { id: "baseten", label: "Baseten", keyEnv: "BASETEN_API_KEY" },
+  { id: "huggingface", label: "Hugging Face", keyEnv: "HF_API_KEY" },
 ];
 
 // ---------------------------------------------------------------------------

@@ -15,6 +15,7 @@ import type { Model } from "@protocol/pi-types";
 function ModelPicker({ onPicked }: { onPicked: () => void }) {
   const project = useAtomValue(activeProjectAtom);
   const store = useAtomValue(agentStoreAtom);
+  const setAgentStore = useSetAtom(agentStoreAtom);
   const [models, setModels] = useAtom(modelsAtom);
   const [, setLoading] = useAtom(modelsLoadingAtom);
   const setLevels = useSetAtom(thinkingLevelsAtom);
@@ -22,6 +23,7 @@ function ModelPicker({ onPicked }: { onPicked: () => void }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [loadingNow, setLoadingNow] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,11 +38,15 @@ function ModelPicker({ onPicked }: { onPicked: () => void }) {
     if (!project) return;
     setLoadingNow(true);
     setLoading(true);
+    setError(null);
     try {
       const result = await api.agentGetModels(project.path);
       setModels(result.models);
-    } catch {
-      // Engine not ready or not authenticated; the picker shows guidance.
+      if (result.models.length === 0) {
+        setError("没有可用模型 — 请先在设置中保存厂商 API Key");
+      }
+    } catch (err) {
+      setError(`拉取模型失败:${String(err instanceof Error ? err.message : err)}`);
     } finally {
       setLoadingNow(false);
       setLoading(false);
@@ -49,13 +55,16 @@ function ModelPicker({ onPicked }: { onPicked: () => void }) {
 
   const pick = async (model: Model<any>): Promise<void> => {
     if (!project) return;
+    setError(null);
     try {
-      await api.agentSetModel(project.path, model.provider, model.id);
+      const result = await api.agentSetModel(project.path, model.provider, model.id);
+      setAgentStore((current) => ({ ...current, state: result.state }));
       const levels = await api.agentGetThinkingLevels(project.path);
       setLevels(levels.levels.map(String));
-    } finally {
       setOpen(false);
       onPicked();
+    } catch (err) {
+      setError(`切换模型失败:${String(err instanceof Error ? err.message : err)}`);
     }
   };
 
@@ -109,7 +118,8 @@ function ModelPicker({ onPicked }: { onPicked: () => void }) {
             <input autoFocus value={query} placeholder="搜索厂商或模型…" onChange={(event) => setQuery(event.target.value)} />
           </div>
           <div className="popover-list">
-            {groups.length === 0 && (
+            {error && <div className="popover-empty popover-error">{error}</div>}
+            {!error && groups.length === 0 && (
               <div className="popover-empty">
                 {loadingNow ? "正在拉取模型列表…" : "没有可用模型。请先在设置中配置厂商 API Key。"}
               </div>
@@ -149,6 +159,7 @@ function ModelPicker({ onPicked }: { onPicked: () => void }) {
 export function Composer() {
   const project = useAtomValue(activeProjectAtom);
   const [store] = useAtom(agentStoreAtom);
+  const setAgentStore = useSetAtom(agentStoreAtom);
   const auth = useAtomValue(authStatusAtom);
   const [levels] = useAtom(thinkingLevelsAtom);
   const setSettingsOpen = useSetAtom(settingsOpenAtom);
@@ -161,9 +172,21 @@ export function Composer() {
   const send = async (): Promise<void> => {
     const message = text.trim();
     if (!message || !project || streaming) return;
-    setText("");
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
-    await api.agentPrompt(project.path, message);
+    try {
+      setText("");
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
+      await api.agentPrompt(project.path, message);
+    } catch (error) {
+      // Restore the draft and surface the failure instead of silently dropping it.
+      setText(message);
+      setAgentStore((current) => ({
+        ...current,
+        notices: [
+          ...current.notices,
+          { id: `err${Date.now()}`, kind: "error", text: `发送失败:${error instanceof Error ? error.message : String(error)}` },
+        ],
+      }));
+    }
   };
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>): void => {

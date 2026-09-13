@@ -254,6 +254,37 @@ export const agentStoreAtom = atom<AgentStore>(emptyAgentStore);
 export const settingsOpenAtom = atom(false);
 export const thinkingLevelsAtom = atom<string[]>(["off", "low", "medium", "high"]);
 
+// ---------------------------------------------------------------------------
+// Persisted UI prefs (localStorage)
+// ---------------------------------------------------------------------------
+
+function atomWithLocalStorage(key: string, initial: boolean) {
+  const stored = typeof localStorage !== "undefined" ? localStorage.getItem(key) : null;
+  const base = atom<boolean>(stored === null ? initial : stored === "1");
+  base.onMount = (setValue) => {
+    const listener = (event: StorageEvent): void => {
+      if (event.key === key && event.newValue !== null) setValue(event.newValue === "1");
+    };
+    window.addEventListener("storage", listener);
+    return () => window.removeEventListener("storage", listener);
+  };
+  const wrapped = atom(
+    (get) => get(base),
+    (_get, set, value: boolean) => {
+      set(base, value);
+      try {
+        localStorage.setItem(key, value ? "1" : "0");
+      } catch {
+        // Private mode / storage disabled — prefs just won't persist.
+      }
+    },
+  );
+  return wrapped;
+}
+
+export const leftCollapsedAtom = atomWithLocalStorage("tenon:leftCollapsed", false);
+export const rightCollapsedAtom = atomWithLocalStorage("tenon:rightCollapsed", false);
+
 export function agentEventToStore(event: TenonEvent, projectPath: string | null, current: AgentStore): AgentStore {
   if (event.kind === "hostStatus") {
     if (!projectPath || event.projectPath !== projectPath) return current;
