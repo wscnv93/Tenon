@@ -89,6 +89,12 @@ function handle<C extends TenonInvokeChannel>(
   channel: C,
   handler: (payload: TenonInvokeIn<C>) => Promise<TenonInvokeOut<C>> | TenonInvokeOut<C>,
 ): void {
+  // A duplicate registration throws inside registerIpc, which used to run
+  // before createWindow — killing the window while the process lived on.
+  if (ipcMain.listenerCount(channel) > 0) {
+    console.error(`[tenon] duplicate IPC handler skipped: ${channel}`);
+    return;
+  }
   ipcMain.handle(channel, (_event, payload: TenonInvokeIn<C>) => handler(payload));
 }
 
@@ -365,17 +371,13 @@ function registerIpc(): void {
 
   const DEFAULT_UPDATE_REPO = "wscnv93/Tenon";
   handle("settings:getUpdateRepo", () => ({ repo: loadSettings().updateRepo || DEFAULT_UPDATE_REPO }));
-  handle("update:check", async ({ repo }) => {
-    sendUpdateProgress("checking");
-    return checkUpdate(repo || DEFAULT_UPDATE_REPO);
-  });
   handle("settings:setUpdateRepo", ({ repo }) => {
     const settings = loadSettings();
     saveSettings({ ...settings, updateRepo: repo.trim() });
   });
   handle("update:check", async ({ repo }) => {
     sendUpdateProgress("checking");
-    return checkUpdate(repo);
+    return checkUpdate(repo || DEFAULT_UPDATE_REPO);
   });
   handle("update:install", async ({ repo }) => {
     try {
