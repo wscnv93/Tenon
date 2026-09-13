@@ -366,8 +366,17 @@ export function agentEventToStore(event: TenonEvent, projectPath: string | null,
       message?: string;
       options?: string[];
       placeholder?: string;
+      notifyType?: string;
     };
     if (typeof request?.id !== "string") return current;
+    // Fire-and-forget notifications surface as transient banners.
+    if (request.method === "notify") {
+      const kind = request.notifyType === "error" ? "error" : request.notifyType === "warning" ? "error" : "info";
+      return { ...current, notices: [...current.notices, { id: request.id, kind, text: request.title ?? "" }] };
+    }
+    if (request.method === "setStatus" || request.method === "setWidget" || request.method === "setTitle" || request.method === "set_editor_text") {
+      return current;
+    }
     const kind = request.method as PendingUiRequest["kind"];
     if (kind !== "select" && kind !== "confirm" && kind !== "input" && kind !== "editor") return current;
     return {

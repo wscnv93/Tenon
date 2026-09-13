@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { agentStoreAtom } from "../state";
 import type { AgentMessage, AssistantMessage, ToolCall } from "@protocol/pi-types";
 import { Markdown } from "./Markdown";
@@ -123,10 +123,24 @@ function AssistantBlock({ message, streaming }: { message: AssistantMessage; str
 
 export function ThreadView() {
   const [store] = useAtom(agentStoreAtom);
+  const setStore = useSetAtom(agentStoreAtom);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pinnedRef = useRef(true);
 
   const streaming = store.state?.isStreaming ?? false;
+
+  // Info banners (e.g. "代码索引已就绪") auto-dismiss; errors stay.
+  useEffect(() => {
+    const infoIds = store.notices.filter((notice) => notice.kind === "info").map((notice) => notice.id);
+    if (infoIds.length === 0) return;
+    const timer = setTimeout(() => {
+      setStore((current) => ({
+        ...current,
+        notices: current.notices.filter((notice) => !infoIds.includes(notice.id)),
+      }));
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [store.notices, setStore]);
 
   useLayoutEffect(() => {
     const element = scrollRef.current;
