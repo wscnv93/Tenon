@@ -1,9 +1,45 @@
 import { useEffect, useRef, useState } from "react";
 import { useAtomValue } from "jotai";
 import { Terminal } from "@xterm/xterm";
+import type { ITheme } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { activeProjectAtom } from "../state";
 import "@xterm/xterm/css/xterm.css";
+
+type ResolvedTheme = "dark" | "light";
+
+function currentTheme(): ResolvedTheme {
+  return document.documentElement.dataset.theme === "light" ? "light" : "dark";
+}
+
+const TERM_PALETTE: Record<ResolvedTheme, ITheme> = {
+  dark: {
+    background: "#131419",
+    foreground: "#e8eaed",
+    cursor: "#4db695",
+    cursorAccent: "#131419",
+    selectionBackground: "rgba(77, 182, 149, 0.25)",
+    black: "#20242b",
+    brightBlack: "#6a7381",
+    green: "#4db695",
+    cyan: "#6ac2d8",
+    red: "#e2685c",
+    yellow: "#e8b84b",
+  },
+  light: {
+    background: "#f4f5f2",
+    foreground: "#21242a",
+    cursor: "#237a62",
+    cursorAccent: "#f4f5f2",
+    selectionBackground: "rgba(35, 122, 98, 0.22)",
+    black: "#3a3f46",
+    brightBlack: "#8a9099",
+    green: "#237a62",
+    cyan: "#1c6d8c",
+    red: "#c24134",
+    yellow: "#8f661c",
+  },
+};
 
 /**
  * Built-in terminal: one PTY per project in a collapsible bottom drawer.
@@ -13,14 +49,25 @@ export function TerminalDrawer() {
   const project = useAtomValue(activeProjectAtom);
   const [open, setOpen] = useState(false);
   const [termId, setTermId] = useState<string | null>(null);
+  const [theme, setTheme] = useState<ResolvedTheme>(currentTheme);
   const hostRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
   const termIdRef = useRef<string | null>(null);
-  const openRef = useRef(false);
 
   termIdRef.current = termId;
-  openRef.current = open;
+
+  // Follow the app theme (App sets data-theme on <html>).
+  useEffect(() => {
+    const observer = new MutationObserver(() => setTheme(currentTheme()));
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const term = xtermRef.current;
+    if (term) term.options.theme = TERM_PALETTE[theme];
+  }, [theme]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -49,12 +96,7 @@ export function TerminalDrawer() {
       fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace",
       fontSize: 12,
       cursorBlink: true,
-      theme: {
-        background: "#131419",
-        foreground: "#e8eaed",
-        cursor: "#4db695",
-        selectionBackground: "rgba(77, 182, 149, 0.25)",
-      },
+      theme: TERM_PALETTE[currentTheme()],
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
