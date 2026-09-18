@@ -5,7 +5,7 @@
   "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
-    "postinstall": "node ../../scripts/fetch-pi.mjs",
+    "postinstall": "node ../../scripts/fetch-pi.mjs && node ../../scripts/fetch-codegraph.mjs",
     "icons": "node ../../scripts/gen-icons.mjs",
     "dev": "electron-vite dev",
     "build": "electron-vite build",

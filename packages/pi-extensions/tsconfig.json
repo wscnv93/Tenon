@@ -5,5 +5,5 @@
     "moduleResolution": "bundler",
     "types": ["node"]
   },
-  "include": ["index.ts", "gate.ts", "codegraph"]
+  "include": ["index.ts", "gate.ts", "review.ts", "codegraph-tools.ts"]
 }

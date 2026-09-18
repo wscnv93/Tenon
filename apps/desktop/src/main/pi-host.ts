@@ -122,6 +122,15 @@ export class PiHost {
     this.setStatus("starting");
     const paths = getPaths();
     const runtime = resolvePiRuntime();
+    // The codegraph extension shells out to this CLI (vendored like the pi
+    // sidecar; dev + packaged paths mirror resolvePiRuntime).
+    const codegraphBin = join(
+      existsSync(join(app.getAppPath(), "vendor", "codegraph")) ? app.getAppPath() : process.resourcesPath,
+      "vendor",
+      "codegraph",
+      "bin",
+      "codegraph",
+    );
     const client = new PiRpcClient({
       command: runtime.command,
       commandArgs: runtime.commandArgs,
@@ -135,6 +144,7 @@ export class PiHost {
         // The desktop client manages updates; pi should never check for new
         // versions on its own.
         PI_SKIP_VERSION_CHECK: "1",
+        ...(existsSync(codegraphBin) ? { TENON_CODEGRAPH_BIN: codegraphBin } : {}),
       },
     });
     this.client = client;

@@ -6,9 +6,8 @@
   "description": "Tenon extensions loaded inside the pi process (sandbox gate + approvals)",
   "dependencies": {
     "@anthropic-ai/sandbox-runtime": "0.0.76",
-    "@sinclair/typebox": "0.34.52",
-    "tree-sitter-wasms": "0.1.13",
-    "web-tree-sitter": "0.24.7"
+    "@colbymchenry/codegraph": "^1.6.0",
+    "@sinclair/typebox": "0.34.52"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "0.85.1",
