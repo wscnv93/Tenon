@@ -10,6 +10,7 @@ import * as git from "./git-service.js";
 import { DEFAULT_MODE, ensureGateExtension, readModeFile, writeModeFile } from "./gate-extension.js";
 import { TerminalService, TERMINAL_EVENT_CHANNEL } from "./terminal-service.js";
 import { listProjectDir } from "./files-browse.js";
+import { fileGraph } from "./codegraph-graph.js";
 import { checkUpdate, downloadUpdate, installUpdate, type UpdateProgress } from "./update-service.js";
 import type {
   TenonEvent,
@@ -368,6 +369,13 @@ function registerIpc(): void {
   handle("terminal:resize", ({ id, cols, rows }) => terminalService.resize(id, cols, rows));
   handle("terminal:dispose", ({ id }) => terminalService.dispose(id));
   handle("files:list", ({ projectPath, dir }) => ({ entries: listProjectDir(projectPath, dir) }));
+  handle("codegraph:fileGraph", ({ projectPath }) => {
+    try {
+      return fileGraph(projectPath);
+    } catch {
+      return { nodes: [], edges: [], indexed: false };
+    }
+  });
 
   const DEFAULT_UPDATE_REPO = "wscnv93/Tenon";
   handle("settings:getUpdateRepo", () => ({ repo: loadSettings().updateRepo || DEFAULT_UPDATE_REPO }));

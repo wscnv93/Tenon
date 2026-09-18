@@ -3,6 +3,7 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { api } from "../lib/api";
 import { statusLabel } from "@protocol/diff";
 import type { FileChange, GitStatus } from "@protocol/ipc";
+import { GraphView } from "./GraphView";
 
 interface DirEntry {
   name: string;
@@ -66,6 +67,7 @@ export function FilesPane() {
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [showGraph, setShowGraph] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
     if (!project) return;
@@ -93,6 +95,9 @@ export function FilesPane() {
   };
 
   if (!project) return <div className="pane-empty">未选择项目</div>;
+  if (showGraph) {
+    return <GraphView onClose={() => setShowGraph(false)} />;
+  }
   if (status && !status.isRepo) {
     return <ProjectBrowser projectPath={project.path} />;
   }
@@ -155,6 +160,9 @@ export function FilesPane() {
     <div className="files-pane">
       <div className="review-toolbar">
         <span className="pane-label">Git 变更</span>
+        <button type="button" className="chip chip-graph" title="展示文件依赖关系图(codegraph)" onClick={() => setShowGraph(true)}>
+          ⛭ 关系图
+        </button>
         {status?.branch && (
           <span className="chip">
             {status.branch}

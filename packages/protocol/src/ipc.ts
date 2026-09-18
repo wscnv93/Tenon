@@ -193,6 +193,29 @@ export const EXEC_MODE_LABEL: Record<ExecMode, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// Codegraph file dependency graph (from .codegraph/codegraph.db, read-only)
+// ---------------------------------------------------------------------------
+
+export interface FileGraphNode {
+  path: string;
+  language: string;
+  nodeCount: number;
+}
+
+export interface FileGraphEdge {
+  src: string;
+  dst: string;
+  weight: number;
+  kinds: string[];
+}
+
+export interface FileGraph {
+  nodes: FileGraphNode[];
+  edges: FileGraphEdge[];
+  indexed: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Invoke channel map (single source of truth for typed ipc)
 // ---------------------------------------------------------------------------
 
@@ -241,6 +264,7 @@ export interface TenonInvokeMap {
     in: { projectPath: string; dir?: string };
     out: { entries: Array<{ name: string; isDir: boolean }> };
   };
+  "codegraph:fileGraph": { in: { projectPath: string }; out: FileGraph };
   "update:check": {
     in: { repo: string };
     out: {
