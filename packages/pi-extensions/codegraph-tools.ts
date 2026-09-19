@@ -9,10 +9,12 @@
  * background; tools answer with clean guidance while that runs.
  */
 import { execFile, spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { Type } from "@sinclair/typebox";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 
 interface CodegraphBin {
   command: string;
@@ -127,26 +129,165 @@ export function setupCodegraphTools(pi: ExtensionAPI) {
     void ensureGraph(ctx.cwd, ctx.ui);
   });
 
+  // ---------------------------------------------------------------------
+  // Explore: the raw CLI output carries a lot of verbatim source, which
+  // would flood the main session's context (upstream guidance). So:
+  //   - main session: the tool dispatches an exploration SUBAGENT (a child
+  //     pi --mode json -p run, tools restricted to codegraph_*) that digests
+  //     the raw material and returns a bounded synthesis; TENON_SUBAGENT=1
+  //     marks the child so it cannot recurse.
+  //   - inside the subagent: the same tool name returns the raw CLI output
+  //     (capped) — the subagent is exactly the consumer that wants it.
+  // ---------------------------------------------------------------------
+  const isSubagent = process.env.TENON_SUBAGENT === "1";
+
+  const directExplore = async (ctx: { cwd: string; ui: UiLike }, query: string, cap: number): Promise<AgentToolResult<unknown>> => {
+    const bin = await resolveBin();
+    if (!bin) return { content: [{ type: "text", text: "未找到 codegraph CLI。" }], details: {} };
+    if (!existsSync(join(ctx.cwd, ".codegraph"))) {
+      void ensureGraph(ctx.cwd, ctx.ui);
+      return { content: [{ type: "text", text: READY_HINT }], details: {} };
+    }
+    const { code, output } = await run(bin, ["explore", query], ctx.cwd, 90_000);
+    return {
+      content: [{ type: "text", text: code === 0 ? truncate(output, cap) : `codegraph explore 失败:\n${truncate(output, 3000)}` }],
+      details: { ok: code === 0 },
+    };
+  };
+
+  const getPiInvocation = (args: string[]): { command: string; args: string[] } => {
+    const currentScript = process.argv[1];
+    const isBunVirtualScript = currentScript?.startsWith("/$bunfs/root/");
+    if (currentScript && !isBunVirtualScript && existsSync(currentScript)) {
+      return { command: process.execPath, args: [currentScript, ...args] };
+    }
+    const execName = process.execPath.split("/").pop()?.toLowerCase() ?? "";
+    const isGenericRuntime = /^(node|bun)(\.exe)?$/.test(execName);
+    if (!isGenericRuntime) return { command: process.execPath, args };
+    return { command: "pi", args };
+  };
+
+  const EXPLORE_SYSTEM_PROMPT = `你是代码探索子代理。你的唯一职责:用 codegraph_* 工具(codegraph_explore / codegraph_search / codegraph_callers / codegraph_callees)回答给定的代码问题,然后输出一份紧凑的综合结论。
+
+输出格式(总长不超过 40 行):
+1. 结论 — 直接回答问题(2-5 句)
+2. 关键位置 — file:line 列表(每项一行,附一句话说明)
+3. 调用路径 — 与问题相关的调用链(如有)
+4. 影响面 — 修改相关符号需要验证什么(如有)
+
+硬性规则:禁止粘贴超过 3 行的源码片段;不要罗列完整文件;所有事实必须有 file:line 依据;探索完成即输出结论,不要请求用户输入。`;
+
+  const dispatchExploreSubagent = async (
+    ctx: { cwd: string },
+    query: string,
+    signal: AbortSignal | undefined,
+    onUpdate?: (text: string) => void,
+  ): Promise<{ ok: boolean; text: string }> => {
+    const tmpDir = mkdtempSync(join(tmpdir(), "tenon-explore-"));
+    const promptPath = join(tmpDir, "system.md");
+    writeFileSync(promptPath, EXPLORE_SYSTEM_PROMPT);
+    const args = [
+      "--mode",
+      "json",
+      "-p",
+      "--no-session",
+      "--tools",
+      "codegraph_explore,codegraph_search,codegraph_callers,codegraph_callees,read",
+      "--append-system-prompt",
+      promptPath,
+      `Task: ${query}`,
+    ];
+    try {
+      const invocation = getPiInvocation(args);
+      const child = spawn(invocation.command, invocation.args, {
+        cwd: ctx.cwd,
+        stdio: ["ignore", "pipe", "pipe"],
+        env: { ...process.env, TENON_SUBAGENT: "1" },
+      });
+      let buffer = "";
+      let lastText = "";
+      let stderr = "";
+      const timer = setTimeout(() => child.kill("SIGKILL"), 180_000);
+      const onAbort = () => child.kill("SIGTERM");
+      signal?.addEventListener("abort", onAbort, { once: true });
+
+      const done = new Promise<string>((resolve) => {
+        child.stdout.setEncoding("utf-8");
+        child.stdout.on("data", (chunk: string) => {
+          buffer += chunk;
+          let index: number;
+          while ((index = buffer.indexOf("\n")) >= 0) {
+            const line = buffer.slice(0, index);
+            buffer = buffer.slice(index + 1);
+            if (!line.trim()) continue;
+            try {
+              const event = JSON.parse(line) as { type: string; message?: { role: string; content?: unknown; stopReason?: string } };
+              if (event.type === "message_end" && event.message?.role === "assistant") {
+                const content = event.message.content;
+                const text = typeof content === "string"
+                  ? content
+                  : Array.isArray(content)
+                    ? content.filter((block: { type?: string }) => block?.type === "text").map((block: { text?: string }) => block.text ?? "").join("")
+                    : "";
+                if (text.trim()) {
+                  lastText = text;
+                  onUpdate?.(text);
+                }
+              }
+            } catch {
+              // Non-JSON line — ignore.
+            }
+          }
+        });
+        child.stderr.setEncoding("utf-8");
+        child.stderr.on("data", (chunk: string) => (stderr += chunk));
+        child.on("error", () => resolve(lastText || `子代理启动失败:${stderr.slice(-500)}`));
+        child.on("close", (code) => {
+          resolve(lastText || (code === 0 ? "" : `子代理异常退出(code ${code})${stderr ? `:${stderr.slice(-500)}` : ""}`));
+        });
+      });
+      const text = await done;
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+      return { ok: Boolean(text), text: text || "子代理没有产出结论,请改用 codegraph_search/callers/callees 直接查询。" };
+    } finally {
+      try {
+        rmSync(tmpDir, { recursive: true, force: true });
+      } catch {
+        // Best effort.
+      }
+    }
+  };
+
   pi.registerTool({
     name: "codegraph_explore",
-    label: "语义探索(推荐)",
-    description:
-      "一次调用回答绝大多数代码问题:how does X work、从 X 到 Y 的调用链、某个区域的概览。" +
-      "返回相关符号的源码(按文件分组)、调用路径、影响面(blast radius)摘要。基于项目的 codegraph 语义图谱。",
+    label: isSubagent ? "语义探索(原始输出)" : "语义探索(推荐,派生子代理)",
+    description: isSubagent
+      ? "直接返回 codegraph explore 的原始输出(源码+调用路径+影响面)。你处于探索子代理内,请消化这些材料后输出紧凑结论。"
+      : "回答宽泛的代码问题(how does X work、调用链、区域概览)。" +
+        "本工具会派生一个探索子代理使用 codegraph 图谱深挖,并只返回紧凑结论(关键 file:line + 调用路径 + 影响面)," +
+        "不会让大段源码占据主对话上下文。快速精确查找请改用 codegraph_search / codegraph_callers / codegraph_callees。",
     parameters: Type.Object({
       query: Type.String({ description: "自然语言问题、符号名或文件路径,如 'update flow'、'AuthService'" }),
     }),
-    async execute(_id, params, _signal, _onUpdate, ctx) {
-      const bin = await resolveBin();
-      if (!bin) return { content: [{ type: "text", text: "未找到 codegraph CLI。" }], details: {} };
+    async execute(_id, params, signal, onUpdate, ctx): Promise<AgentToolResult<unknown>> {
       if (!existsSync(join(ctx.cwd, ".codegraph"))) {
         void ensureGraph(ctx.cwd, ctx.ui);
         return { content: [{ type: "text", text: READY_HINT }], details: {} };
       }
-      const { code, output } = await run(bin, ["explore", params.query], ctx.cwd, 90_000);
+      if (isSubagent) {
+        return await directExplore(ctx, params.query, 8000);
+      }
+      onUpdate?.({
+        content: [{ type: "text", text: "已派出探索子代理,正在深挖并提炼结论…" }],
+        details: {},
+      });
+      const result = await dispatchExploreSubagent(ctx, params.query, signal, (partial) => {
+        onUpdate?.({ content: [{ type: "text", text: truncate(partial, 2000) }], details: {} });
+      });
       return {
-        content: [{ type: "text", text: code === 0 ? truncate(output) : `codegraph explore 失败:\n${truncate(output, 3000)}` }],
-        details: { ok: code === 0 },
+        content: [{ type: "text", text: result.ok ? truncate(result.text, 6000) : result.text }],
+        details: { via: "subagent" },
       };
     },
   });
